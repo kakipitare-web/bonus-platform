@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>פלטפורמת בונוסים | עתיד פתרונות מימון</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+    --accent:#3b82f6;--accent2:#60a5fa;--gold:#f59e0b;--gold2:#fbbf24;
+    --green:#10b981;--red:#ef4444;--purple:#8b5cf6;
+    --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Heebo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 0%,rgba(59,130,246,.08) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(139,92,246,.06) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:24px 20px;}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .logo h1{font-size:18px;font-weight:800;letter-spacing:-.5px;}
+  .logo p{font-size:12px;color:var(--text3);}
+  .hbadge{background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(139,92,246,.15));border:1px solid rgba(59,130,246,.3);padding:6px 14px;border-radius:20px;font-size:12px;color:var(--accent2);font-weight:600;}
+
+  .upload{background:var(--surface);border:2px dashed var(--border);border-radius:14px;padding:24px;text-align:center;margin-bottom:18px;cursor:pointer;transition:border-color .2s;}
+  .upload:hover{border-color:var(--accent);}
+  .upload.ok{border-style:solid;border-color:var(--green);}
+  .upload-icon{font-size:30px;margin-bottom:5px;}
+  .upload-title{font-size:15px;font-weight:700;margin-bottom:2px;}
+  .upload-sub{font-size:12px;color:var(--text3);}
+  .upload-name{font-size:12px;color:var(--green);margin-top:5px;font-weight:600;}
+  #csvInput{display:none;}
+
+  .controls{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;margin-bottom:18px;align-items:end;}
+  .fg{display:flex;flex-direction:column;gap:5px;}
+  label{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+  select,input[type=month]{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:500;cursor:pointer;width:100%;transition:border-color .2s;}
+  select:focus,input[type=month]:focus{outline:none;border-color:var(--accent);}
+  select option{background:var(--surface);}
+  .btn{background:linear-gradient(135deg,var(--accent),var(--purple));color:#fff;border:none;padding:10px 28px;border-radius:10px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;height:42px;white-space:nowrap;transition:opacity .2s,transform .1s;}
+  .btn:hover{opacity:.9;transform:translateY(-1px);}
+
+  /* month display banner */
+  .month-banner{display:none;background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.08));border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:10px 16px;margin-bottom:18px;font-size:14px;font-weight:700;color:var(--accent2);text-align:center;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .sc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;}
+  .sc::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:50%;transform:translate(20px,-20px);opacity:.15;}
+  .sc.bl::before{background:var(--accent)}.sc.go::before{background:var(--gold)}.sc.gr::before{background:var(--green)}.sc.pu::before{background:var(--purple)}
+  .sl{font-size:11px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+  .sv{font-size:24px;font-weight:800;letter-spacing:-1px;}
+  .sc.bl .sv{color:var(--accent2)}.sc.go .sv{color:var(--gold2)}.sc.gr .sv{color:var(--green)}.sc.pu .sv{color:#a78bfa}
+
+  .tsec{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px;}
+  .thead{padding:14px 18px;border-bottom:1px solid var(--border);}
+  .ttitle{font-size:15px;font-weight:700;}
+  .tsub{font-size:12px;color:var(--text3);margin-top:2px;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:var(--surface2);padding:9px 13px;font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;text-align:right;border-bottom:1px solid var(--border);}
+  tbody tr{border-bottom:1px solid rgba(30,45,69,.5);transition:background .15s;}
+  tbody tr:hover{background:var(--surface2);}
+  tbody tr:last-child{border-bottom:none;}
+  td{padding:11px 13px;font-size:13px;vertical-align:middle;}
+  .an{font-weight:700;font-size:14px;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .b0{background:rgba(100,116,139,.2);color:#94a3b8}
+  .b1{background:rgba(59,130,246,.15);color:#60a5fa}
+  .b2{background:rgba(16,185,129,.15);color:#34d399}
+  .b3{background:rgba(245,158,11,.15);color:#fbbf24}
+  .b4{background:rgba(239,68,68,.15);color:#f87171}
+  .pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}.neu{color:var(--text2);}
+  .trow td{font-weight:800;font-size:14px;border-top:2px solid var(--border);}
+  .trow{background:linear-gradient(135deg,rgba(59,130,246,.08),rgba(139,92,246,.05))!important;}
+
+  .dsec{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px;}
+  .dhead{padding:14px 18px;border-bottom:1px solid var(--border);}
+  .dtitle{font-size:15px;font-weight:700;}
+  .asel{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border);}
+  .abtn{padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Heebo',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+  .abtn:hover{border-color:var(--accent);color:var(--accent2);}
+  .abtn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .dc{padding:18px;}
+  .dg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;margin-bottom:14px;}
+  .dcard{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:15px;}
+  .dct{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;font-weight:600;}
+  .brow{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13px;border-bottom:1px solid rgba(30,45,69,.5);}
+  .brow:last-child{border-bottom:none;}
+  .bl2{color:var(--text2);}
+  .bv{font-weight:700;}
+  .dtw{overflow-x:auto;}
+  .dt{width:100%;border-collapse:collapse;font-size:12px;}
+  .dt th{background:var(--surface2);padding:7px 9px;color:var(--text3);font-weight:600;text-align:right;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;}
+  .dt td{padding:7px 9px;border-bottom:1px solid rgba(30,45,69,.4);color:var(--text2);}
+  .dt tr:last-child td{border-bottom:none;}
+  .dt tr:hover td{background:rgba(26,34,53,.5);color:var(--text);}
+  .xbadge{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:var(--gold2);padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+  .sbadge{background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);color:#a78bfa;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+  .empty{text-align:center;padding:50px 20px;color:var(--text3);}
+  .empty-icon{font-size:40px;margin-bottom:8px;}
+  .empty-t{font-size:14px;font-weight:600;margin-bottom:4px;color:var(--text2);}
+  .target-input{
+    background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+    color:var(--gold2);padding:5px 9px;border-radius:8px;
+    font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;
+    width:90px;text-align:center;transition:border-color .2s;
+  }
+  .target-input:focus{outline:none;border-color:var(--gold2);background:rgba(245,158,11,.12);}
+  .target-input::placeholder{color:var(--text3);font-weight:400;}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:11px 18px;border-radius:10px;font-size:13px;font-weight:500;transition:transform .3s;z-index:1000;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* טאבים */
+  .tabs{display:flex;gap:8px;margin-bottom:20px;}
+  .tab{padding:9px 22px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;}
+  .tab:hover{border-color:var(--accent);color:var(--accent2);}
+  .tab.active{background:linear-gradient(135deg,var(--accent),var(--purple));border-color:transparent;color:#fff;}
+  /* סוגרים */
+  .csec{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:18px;}
+  .chead{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .ctitle{font-size:15px;font-weight:700;}
+  .model-badge{font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;}
+  .closer-dg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;margin-bottom:14px;}
+  .closer-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .gal-badge{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+  .shim-badge{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+  @media(max-width:900px){.controls{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(3,1fr);}.dg{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💰</div>
+    <div>
+      <h1>פלטפורמת בונוסים</h1>
+      <p>עתיד פתרונות מימון</p>
+    </div>
+  </div>
+  <div class="hbadge">v4 — בודקים + סוגרים</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('checkers',this)">📋 נציגי בדיקה</button>
+  <button class="tab" onclick="switchTab('closers',this)">🤝 נציגי סגירה</button>
+</div>
+
+<div id="tabCheckers">
+
+<!-- אפשרויות טעינה -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+  <!-- חיבור Google Sheets -->
+  <div class="upload ok" style="cursor:default;border-color:rgba(16,185,129,.5);background:rgba(16,185,129,.04);">
+    <div class="upload-icon">🔗</div>
+    <div class="upload-title" style="color:var(--green)">חיבור ישיר ל-Google Sheets</div>
+    <div class="upload-sub" style="margin-bottom:10px">מושך נתונים עדכניים אוטומטית</div>
+    <button class="btn" style="width:100%;margin-top:4px" onclick="loadFromSheets()">📥 טען מ-Google Sheets</button>
+    <div class="upload-name" id="sheetsStatus"></div>
+  </div>
+  <!-- העלאת CSV -->
+  <div class="upload" id="upSec" onclick="document.getElementById('csvInput').click()">
+    <div class="upload-icon">📂</div>
+    <div class="upload-title">העלה קובץ CSV</div>
+    <div class="upload-sub">לחץ לבחירת קובץ מעקב עסקאות</div>
+    <div class="upload-name" id="upName"></div>
+    <input type="file" id="csvInput" accept=".csv" onchange="handleFile(event)">
+  </div>
+</div>
+
+<div class="controls">
+  <div class="fg">
+    <label>חודש ושנה</label>
+    <input type="month" id="monthPicker">
+  </div>
+  <div class="fg">
+    <label>נציג בדיקה</label>
+    <select id="agentSel">
+      <option value="all">כל הבודקים</option>
+      <option value="שרית">שרית</option>
+      <option value="ניקול">ניקול</option>
+      <option value="איטל">איטל</option>
+      <option value="ניתאי">ניתאי</option>
+      <option value="טופז">טופז</option>
+      <option value="רוני">רוני</option>
+      <option value="מתן אל">מתן אל</option>
+    </select>
+  </div>
+  <button class="btn" onclick="calculate()">⚡ חשב בונוסים</button>
+</div>
+
+<div class="month-banner" id="monthBanner"></div>
+
+<div class="stats" id="statsRow" style="display:none;grid-template-columns:repeat(4,1fr);">
+  <div class="sc bl"><div class="sl">סה"כ בדיקות</div><div class="sv" id="sChecks">0</div></div>
+  <div class="sc go"><div class="sl">בונוס בדיקות</div><div class="sv" id="sCheckB">₪0</div></div>
+  <div class="sc gr"><div class="sl">סה"כ סגירות</div><div class="sv" id="sCloseCnt">0</div></div>
+  <div class="sc pu"><div class="sl">סה"כ חמישיות</div><div class="sv" id="sFives">0</div></div>
+  <div class="sc gr"><div class="sl">בונוס סגירות</div><div class="sv" id="sCloseB">₪0</div></div>
+  <!-- כרטיס יעדים -->
+  <div class="sc" style="border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.06);">
+    <div class="sl" style="color:var(--gold)">🎯 בונוס יעדים — סה"כ</div>
+    <input type="number" id="globalTargetInput" placeholder="הכנס סכום..." min="0"
+      style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.4);color:var(--gold2);
+             padding:6px 10px;border-radius:8px;font-family:'Heebo',sans-serif;font-size:18px;
+             font-weight:800;width:100%;margin-top:4px;text-align:center;"
+      oninput="updateGlobalTarget(this.value)">
+  </div>
+  <div class="sc pu"><div class="sl">סה"כ בונוס + יעדים</div><div class="sv" id="sTotal">₪0</div></div>
+</div>
+
+<div class="tsec">
+  <div class="thead">
+    <div class="ttitle">סיכום בונוסים — בודקים</div>
+    <div class="tsub" id="tsub">טען קובץ ובחר חודש לחישוב</div>
+  </div>
+  <div id="sumContent">
+    <div class="empty"><div class="empty-icon">📊</div><div class="empty-t">אין נתונים להצגה</div><div>העלה קובץ CSV ולחץ "חשב בונוסים"</div></div>
+  </div>
+</div>
+
+<!-- התראות -->
+<div class="tsec" id="alertsSec" style="display:none">
+  <div class="thead">
+    <div class="ttitle">🔔 התראות</div>
+    <div class="tsub">נציגים קרובים למדרגה הבאה + ימי חמישייה</div>
+  </div>
+  <div id="alertsContent" style="padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px;"></div>
+</div>
+
+<!-- לוח מנצחים -->
+<div class="tsec" id="leaderSec" style="display:none">
+  <div class="thead" style="display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div class="ttitle">🏆 לוח מנצחים</div>
+      <div class="tsub">דירוג נציגים לפי ביצועים</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="abtn active" id="lbByChecks" onclick="switchLeader('checks',this)">לפי בדיקות</button>
+      <button class="abtn" id="lbByClose" onclick="switchLeader('closures',this)">לפי סגירות</button>
+    </div>
+  </div>
+  <div id="leaderContent" style="padding:16px 18px;"></div>
+</div>
+
+<div class="dsec" id="detSec" style="display:none">
+  <div class="dhead"><div class="dtitle">פירוט מלא לפי נציג</div></div>
+  <div class="asel" id="asel"></div>
+  <div class="dc" id="detContent"></div>
+</div>
+
+</div><!-- end tabCheckers -->
+
+<!-- ═══ TAB סוגרים ═══ -->
+<div id="tabClosers" style="display:none">
+
+<div class="closer-stats" id="closerStatsRow" style="display:none">
+  <div class="sc bl"><div class="sl">סה"כ עסקאות</div><div class="sv" id="csTotalDeals">0</div></div>
+  <div class="sc go"><div class="sl">הכנסה כוללת</div><div class="sv" id="csTotalIncome">₪0</div></div>
+  <div class="sc gr"><div class="sl">בונוס סוגרים</div><div class="sv" id="csTotalBonus">₪0</div></div>
+  <div class="sc pu"><div class="sl">כולל יעדים</div><div class="sv" id="csTotalGrand">₪0</div></div>
+</div>
+
+<!-- שימרי -->
+<div class="csec" id="shimriSec" style="display:none">
+  <div class="chead">
+    <div class="ctitle">💼 שימרי — נציג סגירה</div>
+    <div class="model-badge">5% / 7% / 10% לפי סכום</div>
+  </div>
+  <div class="closer-detail" id="shimriDetail">
+    <div class="empty"><div class="empty-icon">📊</div><div class="empty-t">לחץ "חשב סוגרים" לצפייה בנתונים</div></div>
+  </div>
+</div>
+
+<!-- גל הראל -->
+<div class="csec" id="galSec" style="display:none">
+  <div class="chead">
+    <div class="ctitle">💼 גל הראל — נציגת סגירה</div>
+    <div class="model-badge">10% / 15% + בונוס יומי 500</div>
+  </div>
+  <div class="closer-detail" id="galDetail">
+    <div class="empty"><div class="empty-icon">📊</div><div class="empty-t">לחץ "חשב סוגרים" לצפייה בנתונים</div></div>
+  </div>
+</div>
+
+  <div style="text-align:center;margin-bottom:18px">
+    <button class="btn" onclick="calculateClosers()">⚡ חשב סוגרים</button>
+  </div>
+</div><!-- end tabClosers -->
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CHECKERS=['שרית','ניקול','איטל','ניתאי','טופז','רוני','מתן אל'];
+let csvData=[], results={};
+// שמירת בונוסי יעד לכל נציג (נשמר גם בין חישובים)
+let targetBonuses={};
+
+function updateTarget(agentName, val){
+  const num=parseFloat(val)||0;
+  targetBonuses[agentName]=num;
+
+  // עדכון תא הסה"כ של הנציג
+  const a=results[agentName];
+  if(a){
+    const cell=document.getElementById(`grand-${agentName}`);
+    if(cell) cell.textContent=fmt(a.total+num);
+  }
+
+  // עדכון שורת סה"כ
+  const ag=Object.values(results);
+  const totTarget=ag.reduce((s,a)=>s+(targetBonuses[a.name]||0),0);
+  const totGrand=ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0),0);
+  const tc=document.getElementById('totalTargetCell');
+  const gc=document.getElementById('grandTotalCell');
+  if(tc) tc.textContent=fmt(totTarget);
+  if(gc) gc.textContent=fmt(totGrand);
+
+  // עדכון stat card סה"כ
+  document.getElementById('sTotal').textContent=fmt(totGrand);
+}
+
+// ── מדרגות בדיקות ──
+function getTier(n){
+  if(n>=81)return{name:'בסט סלר+',pct:.40,b:'b4'};
+  if(n>=61)return{name:'בסט סלר', pct:.30,b:'b3'};
+  if(n>=41)return{name:'סלר',      pct:.20,b:'b2'};
+  if(n>=21)return{name:'נורמל',    pct:.15,b:'b1'};
+  if(n>=1) return{name:'מינימום',  pct:.10,b:'b0'};
+  return null;
+}
+
+// ── בונוס סגירה לפי טבלה (על בסיס תשלום 1 כולל מעמ) ──
+function closureBonus(amt){
+  if(amt>=15000)return 800;
+  if(amt>=8500) return 400;
+  if(amt>=6000) return 300;
+  if(amt>=4000) return 150;
+  if(amt>=3000) return 100;
+  return 0;
+}
+
+// ── בונוס יומי ──
+function dailyExtra(checks,closures){
+  if(checks>=5){
+    if(closures>=5)return{amount:1000,label:'5 בדיקות + 5 סגירות'};
+    if(closures>=3)return{amount:600, label:'5 בדיקות + 3 סגירות'};
+    if(closures>=2)return{amount:500, label:'5 בדיקות + 2 סגירות'};
+    return{amount:300,label:'5 בדיקות ביום'};
+  }
+  return null;
+}
+
+function norm(s){return(s||'').trim().replace(/\s+/g,' ').toLowerCase();}
+function pn(s){if(!s)return 0;const n=parseFloat((s+'').replace(/[^\d.\-]/g,''));return isNaN(n)?0:n;}
+function pd(s){const[d,m,y]=s.split('/');return new Date(+y,+m-1,+d);}
+
+// ── פריסת שורת CSV ──
+function parseCSVLine(line){
+  const r=[];let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"')inQ=!inQ;
+    else if(c===','&&!inQ){r.push(cur);cur='';}
+    else cur+=c;
+  }
+  r.push(cur);return r;
+}
+
+// ── מיפוי עמודות לפי שנה ──
+// 2025: col[8]=צוות, col[9]=בודק, col[10]=סוגר, col[11]=עסקה מלאה,
+//       col[12]=דרך תשלום בדיקה, col[13]=הכנס בדיקה, col[14]=הכנסה עסקה,
+//       col[15]=דרך תשלום סגירה, col[16]=תשלום 1
+//
+// 2026: col[9]=בודק (פורמט "ניקול / שימרי" או "ניקול סולו"),
+//       col[10]=ריק (סוגר מוטמע בcol[9]),
+//       col[11]=עסקה מלאה, col[12]=דרך תשלום בדיקה,
+//       col[13]=הכנס בדיקה, col[14]=הכנסה עסקה, col[16]=תשלום 1
+function parseRow(cols,year){
+  const dateStr=cols[0]?.trim();
+  let checker='', closerCell='', closer='', isSolo=false;
+  let isFullDeal=false, payMethod='', checkIncome=0, dealIncome=0, closureAmt=0;
+
+  if(year<=2025){
+    // פורמט 2025
+    checker    = cols[9]?.trim()||'';
+    closerCell = cols[10]?.trim()||'';
+    isFullDeal = cols[11]?.trim().toUpperCase()==='TRUE';
+    payMethod  = cols[12]?.trim()||'';
+    checkIncome= pn(cols[13]);
+    dealIncome = pn(cols[14]);
+    closureAmt = pn(cols[16]);
+
+    // מחלץ שם סוגר מ-col[10]
+    const ex10=extractCloser(closerCell);
+    closer=ex10.closer; isSolo=ex10.isSolo;
+  } else {
+    // פורמט 2026 — col[9] מכיל הכל
+    const raw9  = cols[9]?.trim()||'';
+    isFullDeal  = cols[11]?.trim().toUpperCase()==='TRUE';
+    payMethod   = cols[12]?.trim()||'';
+    checkIncome = pn(cols[13]);
+    dealIncome  = pn(cols[14]);
+    closureAmt  = pn(cols[16]);
+    closerCell  = raw9;
+
+    // מחלצים בודק וסוגר מ-col[9]
+    // "ניקול"            → checker=ניקול, closer='', solo=false
+    // "ניקול סולו"       → checker=ניקול, closer=ניקול, solo=true
+    // "ניקול / שימרי"    → checker=ניקול, closer=שימרי, solo=false
+    // "ניקול + טופז(1/2) / גל הראל" → checker=ניקול, closer=גל הראל
+    if(norm(raw9).includes('סולו')){
+      checker=raw9.replace(/סולו/gi,'').replace(/\+.*$/,'').trim();
+      closer=checker; isSolo=true;
+    } else if(raw9.includes('/')){
+      // לפצל לפי /, הבודק הוא החלק הראשון (לפני הראשון /)
+      // אבל יתכן "ניקול + טופז(1/2) / גל הראל" — נחשב רק את הסלאש האחרון
+      const lastSlash=raw9.lastIndexOf('/');
+      checker=raw9.substring(0,lastSlash).replace(/\+.*$/,'').trim();
+      // אם יש פסיק ב-checker (כמו "ניקול + טופז") — לקחת רק את הראשון
+      checker=checker.replace(/\s*\+.*$/,'').trim();
+      closer=raw9.substring(lastSlash+1).trim();
+      isSolo=false;
+    } else {
+      checker=raw9; closer=''; isSolo=false;
+    }
+  }
+
+  return{dateStr,checker,closerCell,closer,isSolo,isFullDeal,payMethod,checkIncome,dealIncome,closureAmt};
+}
+
+// לשימוש ב-2025 עם col[10]
+function extractCloser(cell){
+  const s=(cell||'').trim();
+  if(!s)return{closer:'',isSolo:false};
+  if(norm(s).includes('סולו')){
+    return{closer:s.replace(/סולו/gi,'').trim(),isSolo:true};
+  }
+  if(s.includes('/')){
+    const parts=s.split('/');
+    return{closer:parts[parts.length-1].trim(),isSolo:false};
+  }
+  return{closer:s,isSolo:false};
+}
+
+function parseCSV(text){
+  const rows=[];
+  text.split('\n').forEach(line=>{
+    line=line.trim();if(!line)return;
+    const cols=parseCSVLine(line);
+    if(cols.length<14)return;
+    const dateStr=cols[0]?.trim();
+    if(!dateStr||!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/))return;
+    const year=+dateStr.split('/')[2];
+    const row=parseRow(cols,year);
+    rows.push(row);
+  });
+  return rows;
+}
+
+// ── חישוב לנציג ──
+function calcAgent(name,rows,year,month){
+  const mRows=rows.filter(r=>{
+    const d=pd(r.dateStr);
+    return d.getFullYear()===year&&d.getMonth()===month;
+  });
+
+  // בדיקות: הנציג הוא הבודק + לא "בדיקה בתאריך אחר" + checkIncome≠0
+  const checkRows=mRows.filter(r=>
+    norm(r.checker)===norm(name)&&
+    !r.payMethod.includes('בדיקה בתאריך אחר')&&
+    r.checkIncome!==0
+  );
+
+  let netCount=0,totalIncome=0;
+  checkRows.forEach(r=>{
+    netCount+=r.checkIncome<0?-1:1;
+    totalIncome+=r.checkIncome;
+  });
+
+  const tier=getTier(netCount);
+  let checkB=0;
+  if(tier){
+    // מיין בדיקות לפי תאריך (כדי לספור לפי סדר)
+    const validChecks=checkRows.filter(r=>r.checkIncome>0)
+      .sort((a,b)=>a.dateStr.localeCompare(b.dateStr));
+
+    validChecks.forEach((r,idx)=>{
+      const checkNum=idx+1; // מספר הבדיקה הנוכחית (1-based)
+      // בדיקה >= 1000 ש"ח → תמיד 20% ללא קשר למדרגה
+      if(r.checkIncome>=1000){
+        checkB+=r.checkIncome*0.20;
+        return;
+      }
+      // חישוב מדורג: איזה אחוז מגיע לבדיקה מספר checkNum
+      let pct=0;
+      if(checkNum<=20)      pct=0.10;
+      else if(checkNum<=40) pct=0.15;
+      else if(checkNum<=60) pct=0.20;
+      else if(checkNum<=80) pct=0.30;
+      else                  pct=0.40;
+      checkB+=r.checkIncome*pct;
+    });
+  }
+
+  // סגירות: הנציג הוא הבודק + עסקה מלאה + יש סכום
+  // כולל שורות "בדיקה בתאריך אחר" — הסגירה נספרת
+  const closeRows=mRows.filter(r=>
+    norm(r.checker)===norm(name)&&
+    r.isFullDeal&&
+    (r.closureAmt>0||r.dealIncome>0)
+  );
+
+  let closeB=0;
+  const closeDetails=[];
+  closeRows.forEach(r=>{
+    let bonus=0,type='';
+    if(r.isSolo){
+      bonus=r.dealIncome*.10;
+      type='סולו 10%';
+    } else {
+      bonus=closureBonus(r.closureAmt);
+      type='טבלה';
+    }
+    closeB+=bonus;
+    closeDetails.push({date:r.dateStr,closerCell:r.closerCell,isSolo:r.isSolo,dealIncome:r.dealIncome,closureAmt:r.closureAmt,bonus,type});
+  });
+
+  // בונוס יומי
+  const byDay={};
+  checkRows.forEach(r=>{
+    if(r.checkIncome<=0)return;
+    if(!byDay[r.dateStr])byDay[r.dateStr]={checks:0,closures:0,extra:0};
+    byDay[r.dateStr].checks++;
+  });
+  closeRows.forEach(r=>{
+    if(!byDay[r.dateStr])byDay[r.dateStr]={checks:0,closures:0,extra:0};
+    byDay[r.dateStr].closures++;
+  });
+
+  let extraB=0;
+  const extraDetails=[];
+  Object.entries(byDay).forEach(([date,day])=>{
+    const ex=dailyExtra(day.checks,day.closures);
+    if(ex){extraB+=ex.amount;day.extra=ex.amount;extraDetails.push({date,...ex});}
+  });
+
+  return{name,netCount,totalIncome,tier,checkB,
+         closeCount:closeRows.length,closeB,closeDetails,
+         extraB,extraDetails,total:checkB+closeB+extraB,
+         byDay,checkRows,closeRows};
+}
+
+// ── טעינה מ-Google Sheets ──
+const SHEET_ID   = '1Ol7wj6n7_qpTO1fuXrjFGCHJG1ROhKsw05FWzTwB6GE';
+const SHEET_NAME = 'חברת עתיד שבירת שיאים חדשים , מלחמה ! ';
+
+async function loadFromSheets(){
+  const statusEl = document.getElementById('sheetsStatus');
+  statusEl.textContent = '⏳ מתחבר ל-Google Sheets...';
+  statusEl.style.color = 'var(--accent2)';
+
+  try {
+    const encodedName = encodeURIComponent(SHEET_NAME);
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('שגיאת חיבור');
+    const text = await resp.text();
+    csvData = parseCSV(text);
+    statusEl.textContent = `✓ נטענו ${csvData.length} שורות מ-Google Sheets`;
+    statusEl.style.color = 'var(--green)';
+    toast(`✅ נטענו ${csvData.length} שורות מ-Google Sheets`);
+  } catch(err) {
+    statusEl.textContent = '❌ שגיאה בחיבור — ודא שהגיליון ציבורי';
+    statusEl.style.color = 'var(--red)';
+    toast('❌ שגיאה בטעינה מ-Google Sheets');
+  }
+}
+
+
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      csvData=parseCSV(ev.target.result);
+      document.getElementById('upSec').classList.add('ok');
+      document.getElementById('upName').textContent=`✓ ${f.name} — ${csvData.length} שורות`;
+      toast(`✅ נטענו ${csvData.length} רשומות`);
+    }catch(err){toast('❌ שגיאה בקריאת הקובץ');}
+  };
+  r.readAsText(f,'UTF-8');
+}
+
+function calculate(){
+  if(!csvData.length){toast('⚠️ אנא טען קובץ CSV');return;}
+  const mv=document.getElementById('monthPicker').value;
+  if(!mv){toast('⚠️ אנא בחר חודש');return;}
+  const[year,month]=mv.split('-').map(Number);
+  const sel=document.getElementById('agentSel').value;
+  const agents=sel==='all'?CHECKERS:[sel];
+
+  results={};
+  agents.forEach(a=>{results[a]=calcAgent(a,csvData,year,month-1);});
+
+  // הצג באנר חודש+שנה בצורה ברורה
+  const MHE=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  const banner=document.getElementById('monthBanner');
+  banner.style.display='block';
+  banner.textContent=`📅 מציג נתונים עבור: ${MHE[month-1]} ${year}`;
+
+  renderSummary(year,month,MHE);
+  renderAlerts();
+  renderLeaderboard('checks');
+  renderDetail();
+}
+
+function renderSummary(year,month,MHE){
+  document.getElementById('tsub').textContent=`${MHE[month-1]} ${year}`;
+  const ag=Object.values(results);
+  document.getElementById('statsRow').style.display='grid';
+  document.getElementById('sChecks').textContent=ag.reduce((s,a)=>s+Math.max(0,a.netCount),0);
+  document.getElementById('sCheckB').textContent=fmt(ag.reduce((s,a)=>s+a.checkB,0));
+  document.getElementById('sCloseCnt').textContent=ag.reduce((s,a)=>s+a.closeCount,0);
+  document.getElementById('sFives').textContent=ag.reduce((s,a)=>s+a.extraDetails.length,0);
+  document.getElementById('sCloseB').textContent=fmt(ag.reduce((s,a)=>s+a.closeB+a.extraB,0));
+  baseBonusTotal = ag.reduce((s,a)=>s+a.total,0);
+  document.getElementById('sTotal').textContent=fmt(baseBonusTotal + globalTarget);
+
+  let h=`<table><thead><tr>
+    <th>נציג</th><th>מדרגה</th><th>בדיקות נטו</th><th>הכנסה בדיקות</th>
+    <th>בונוס בדיקות</th><th>סגירות ✓</th><th>בונוס סגירות</th>
+    <th>חמישיות 🖐</th><th>בונוס יומי</th>
+    <th style="color:var(--gold2)">🎯 בונוס יעד</th>
+    <th>סה"כ כולל יעד</th>
+  </tr></thead><tbody>`;
+
+  ag.forEach(a=>{
+    const tb=a.tier?`<span class="badge ${a.tier.b}">${a.tier.name} ${(a.tier.pct*100).toFixed(0)}%</span>`:'<span class="badge b0">—</span>';
+    const fivesCount=a.extraDetails.length;
+    const savedTarget = targetBonuses[a.name]||0;
+    h+=`<tr>
+      <td class="an">${a.name}</td>
+      <td>${tb}</td>
+      <td>${a.netCount}</td>
+      <td class="${a.totalIncome<0?'neg':'neu'}">${fmt(a.totalIncome)}</td>
+      <td class="pos">${fmt(a.checkB)}</td>
+      <td style="font-weight:700;color:var(--accent2)">${a.closeCount}</td>
+      <td class="pos">${fmt(a.closeB)}</td>
+      <td style="font-weight:700;color:${fivesCount>0?'var(--gold2)':'var(--text3)'}">${fivesCount>0?fivesCount:'—'}</td>
+      <td class="${a.extraB>0?'pos':'neu'}">${fmt(a.extraB)}</td>
+      <td>
+        <input type="number" class="target-input" data-agent="${a.name}"
+          value="${savedTarget||''}" placeholder="0 ₪" min="0"
+          oninput="updateTarget('${a.name}',this.value)">
+      </td>
+      <td class="pos grand-total-cell" id="grand-${a.name}" style="font-size:15px;font-weight:800">
+        ${fmt(a.total+(savedTarget||0))}
+      </td>
+    </tr>`;
+  });
+
+  h+=`<tr class="trow">
+    <td>סה"כ</td><td></td>
+    <td>${ag.reduce((s,a)=>s+Math.max(0,a.netCount),0)}</td>
+    <td>${fmt(ag.reduce((s,a)=>s+a.totalIncome,0))}</td>
+    <td>${fmt(ag.reduce((s,a)=>s+a.checkB,0))}</td>
+    <td style="color:var(--accent2)">${ag.reduce((s,a)=>s+a.closeCount,0)}</td>
+    <td>${fmt(ag.reduce((s,a)=>s+a.closeB,0))}</td>
+    <td style="color:var(--gold2)">${ag.reduce((s,a)=>s+a.extraDetails.length,0)||'—'}</td>
+    <td>${fmt(ag.reduce((s,a)=>s+a.extraB,0))}</td>
+    <td id="totalTargetCell" style="color:var(--gold2);font-weight:800">${fmt(ag.reduce((s,a)=>s+(targetBonuses[a.name]||0),0))}</td>
+    <td id="grandTotalCell" style="color:var(--gold2);font-size:16px">${fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0),0))}</td>
+  </tr></tbody></table>`;
+
+  document.getElementById('sumContent').innerHTML=h;
+}
+
+function renderDetail(){
+  const agents=Object.keys(results);
+  if(!agents.length)return;
+  document.getElementById('detSec').style.display='block';
+  document.getElementById('asel').innerHTML=agents.map((a,i)=>
+    `<button class="abtn ${i===0?'active':''}" onclick="showAgent('${a}',this)">${a}</button>`
+  ).join('');
+  showAgent(agents[0]);
+}
+
+function showAgent(name,btn){
+  if(btn){document.querySelectorAll('.abtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  const a=results[name];if(!a)return;
+  const tb=a.tier?`<span class="badge ${a.tier.b}">${a.tier.name} — ${(a.tier.pct*100).toFixed(0)}%</span>`:'<span class="badge b0">אין נתונים</span>';
+
+  let h=`<div class="dg">
+    <div class="dcard">
+      <div class="dct">📋 בדיקות</div>
+      <div class="brow"><span class="bl2">מדרגה</span><span>${tb}</span></div>
+      <div class="brow"><span class="bl2">בדיקות נטו</span><span class="bv">${a.netCount}</span></div>
+      <div class="brow"><span class="bl2">הכנסה מבדיקות</span><span class="bv">${fmt(a.totalIncome)}</span></div>
+      <div class="brow"><span class="bl2">בונוס בדיקות</span><span class="bv" style="color:var(--green)">${fmt(a.checkB)}</span></div>
+    </div>
+    <div class="dcard">
+      <div class="dct">🤝 סגירות</div>
+      <div class="brow"><span class="bl2">מספר סגירות</span><span class="bv" style="color:var(--accent2)">${a.closeCount}</span></div>
+      <div class="brow"><span class="bl2">ימי חמישייה</span><span class="bv" style="color:var(--gold2)">${a.extraDetails.length||'—'}</span></div>
+      <div class="brow"><span class="bl2">בונוס סגירות</span><span class="bv" style="color:var(--green)">${fmt(a.closeB)}</span></div>
+      <div class="brow"><span class="bl2">בונוס יומי נוסף</span><span class="bv" style="color:var(--gold2)">${fmt(a.extraB)}</span></div>
+    </div>
+    <div class="dcard">
+      <div class="dct">💰 סיכום</div>
+      <div class="brow"><span class="bl2">בונוס בדיקות</span><span class="bv">${fmt(a.checkB)}</span></div>
+      <div class="brow"><span class="bl2">בונוס סגירות</span><span class="bv">${fmt(a.closeB)}</span></div>
+      <div class="brow"><span class="bl2">בונוס יומי</span><span class="bv">${fmt(a.extraB)}</span></div>
+      <div class="brow" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+        <span style="font-weight:800;color:var(--text);font-size:14px">סה"כ</span>
+        <span style="color:var(--gold2);font-size:18px;font-weight:900">${fmt(a.total)}</span>
+      </div>
+    </div>
+  </div>`;
+
+  // פירוט יומי
+  const days=Object.entries(a.byDay).sort((x,y)=>x[0].localeCompare(y[0]));
+  if(days.length){
+    h+=`<div class="dcard" style="margin-bottom:13px">
+      <div class="dct">📅 פירוט יומי</div>
+      <div class="dtw"><table class="dt">
+        <thead><tr><th>תאריך</th><th>בדיקות</th><th>סגירות</th><th>בונוס יומי</th></tr></thead><tbody>`;
+    days.forEach(([d,day])=>{
+      h+=`<tr><td>${d}</td><td>${day.checks}</td><td>${day.closures||0}</td>
+        <td>${day.extra>0?`<span class="xbadge">+${fmt(day.extra)}</span>`:'—'}</td></tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  }
+
+  // פירוט סגירות
+  if(a.closeDetails.length){
+    h+=`<div class="dcard" style="margin-bottom:13px">
+      <div class="dct">💼 פירוט סגירות</div>
+      <div class="dtw"><table class="dt">
+        <thead><tr><th>תאריך</th><th>שם סוגר</th><th>סכום עסקה</th><th>תשלום כולל מעמ</th><th>סוג</th><th>בונוס</th></tr></thead><tbody>`;
+    a.closeDetails.forEach(c=>{
+      h+=`<tr>
+        <td>${c.date}</td>
+        <td>${c.closerCell}</td>
+        <td>${fmt(c.dealIncome)}</td>
+        <td>${fmt(c.closureAmt)}</td>
+        <td>${c.isSolo?'<span class="sbadge">סולו</span>':'טבלה'}</td>
+        <td style="color:var(--green);font-weight:700">${fmt(c.bonus)}</td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
+  }
+
+  // בונוסים יומיים
+  if(a.extraDetails.length){
+    h+=`<div class="dcard">
+      <div class="dct">⭐ חמישיות — פירוט ימים (${a.extraDetails.length} ימים)</div>`;
+    a.extraDetails.forEach(e=>{
+      h+=`<div class="brow">
+        <span class="bl2">${e.date} — ${e.label}</span>
+        <span class="bv" style="color:var(--gold2)">${fmt(e.amount)}</span>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+
+  document.getElementById('detContent').innerHTML=h;
+}
+
+// ── התראות ──
+function renderAlerts(){
+  const ag=Object.values(results);
+  const alerts=[];
+
+  ag.forEach(a=>{
+    // התראה: קרוב למדרגה הבאה (פחות מ-5 בדיקות)
+    const thresholds=[20,40,60,80];
+    const tiers=['נורמל (15%)','סלר (20%)','בסט סלר (30%)','בסט סלר+ (40%)'];
+    thresholds.forEach((t,i)=>{
+      const diff=t-a.netCount;
+      if(diff>0&&diff<=5){
+        alerts.push({
+          type:'tier',
+          agent:a.name,
+          msg:`${a.name} — עוד ${diff} בדיקות למדרגת ${tiers[i]}`,
+          color:'var(--accent2)',
+          bg:'rgba(59,130,246,.12)',
+          border:'rgba(59,130,246,.3)',
+          icon:'⚡'
+        });
+      }
+    });
+
+    // התראה: ימי חמישייה
+    a.extraDetails.forEach(e=>{
+      alerts.push({
+        type:'five',
+        agent:a.name,
+        msg:`${a.name} — חמישייה ב-${e.date} (${e.label}) +${fmt(e.amount)}`,
+        color:'var(--gold2)',
+        bg:'rgba(245,158,11,.1)',
+        border:'rgba(245,158,11,.3)',
+        icon:'🖐'
+      });
+    });
+  });
+
+  const sec=document.getElementById('alertsSec');
+  const content=document.getElementById('alertsContent');
+
+  if(!alerts.length){
+    sec.style.display='none';
+    return;
+  }
+
+  sec.style.display='block';
+  content.innerHTML=alerts.map(al=>`
+    <div style="background:${al.bg};border:1px solid ${al.border};border-radius:10px;
+                padding:10px 14px;font-size:13px;font-weight:600;color:${al.color};
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:18px">${al.icon}</span>
+      <span>${al.msg}</span>
+    </div>
+  `).join('');
+}
+
+// ── לוח מנצחים ──
+let leaderMode='checks';
+
+function switchLeader(mode,btn){
+  leaderMode=mode;
+  document.querySelectorAll('#lbByChecks,#lbByClose').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeaderboard(mode);
+}
+
+function renderLeaderboard(mode){
+  const ag=Object.values(results);
+  if(!ag.length) return;
+
+  document.getElementById('leaderSec').style.display='block';
+
+  const sorted=[...ag].sort((a,b)=>
+    mode==='checks' ? b.netCount-a.netCount : b.closeCount-a.closeCount
+  );
+
+  const maxVal=mode==='checks'
+    ? Math.max(...sorted.map(a=>a.netCount),1)
+    : Math.max(...sorted.map(a=>a.closeCount),1);
+
+  const medals=['🥇','🥈','🥉'];
+
+  let h='';
+  sorted.forEach((a,i)=>{
+    const val   = mode==='checks' ? a.netCount : a.closeCount;
+    const pct   = Math.round((val/maxVal)*100);
+    const medal = medals[i]||`${i+1}.`;
+    const tier  = a.tier ? `<span class="badge ${a.tier.b}" style="font-size:10px">${a.tier.name}</span>` : '';
+
+    h+=`<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${medal}</span>
+          <span style="font-weight:700;font-size:14px">${a.name}</span>
+          ${tier}
+        </div>
+        <span style="font-weight:800;font-size:15px;color:${i===0?'var(--gold2)':'var(--text2)'}">${val} ${mode==='checks'?'בדיקות':'סגירות'}</span>
+      </div>
+      <div style="background:var(--border);border-radius:20px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;border-radius:20px;
+                    background:${i===0?'linear-gradient(90deg,var(--gold),var(--gold2))':
+                                 i===1?'linear-gradient(90deg,var(--accent),var(--accent2))':
+                                 'linear-gradient(90deg,var(--purple),#a78bfa)'};
+                    transition:width .6s ease"></div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('leaderContent').innerHTML=h;
+}
+
+
+  if(!n&&n!==0)return'₪0';
+  return'₪'+Math.round(n).toLocaleString('he-IL');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+const now=new Date();
+document.getElementById('monthPicker').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+
+// ════════════════════════════════════════
+// מודול סוגרים
+// ════════════════════════════════════════
+
+let globalTarget = 0;
+let baseBonusTotal = 0; // נשמר לחישוב עם יעד
+let closerTargets = { shimri: 0, gal: 0 };
+
+function updateGlobalTarget(val) {
+  globalTarget = parseFloat(val) || 0;
+  document.getElementById('sTotal').textContent = fmt(baseBonusTotal + globalTarget);
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tabCheckers').style.display = tab === 'checkers' ? 'block' : 'none';
+  document.getElementById('tabClosers').style.display  = tab === 'closers'  ? 'block' : 'none';
+}
+
+// ── חישוב בונוס שימרי ──
+// עד 6,000 ש"ח (ללא מעמ) → 5%
+// 6,001–10,000 → 7%
+// 10,001+ → 10%
+function shimriBonus(dealIncome) {
+  if (dealIncome <= 0) return 0;
+  if (dealIncome <= 6000)  return dealIncome * 0.05;
+  if (dealIncome <= 10000) return dealIncome * 0.07;
+  return dealIncome * 0.10;
+}
+
+// ── חישוב בונוס גל הראל ──
+// עד 15,000 → 10% | מעל 15,000 → 15%
+// בונוס אקסטרה: כל יום שהכנסה >= 20,000 → +500 ש"ח
+function galBonus(dealIncome) {
+  if (dealIncome <= 0) return 0;
+  if (dealIncome <= 15000) return dealIncome * 0.10;
+  return dealIncome * 0.15;
+}
+
+function calculateClosers() {
+  if (!csvData.length) { toast('⚠️ אנא טען קובץ CSV'); return; }
+  const mv = document.getElementById('monthPicker').value;
+  if (!mv) { toast('⚠️ אנא בחר חודש'); return; }
+  const [year, month] = mv.split('-').map(Number);
+
+  const mRows = csvData.filter(r => {
+    const d = pd(r.dateStr);
+    return d.getFullYear() === year && d.getMonth() === month - 1;
+  });
+
+  // שורות עסקה מלאה (לא סולו של בודקים — אלה נסגרו ע"י סוגר)
+  // עסקה רלוונטית לסוגר: isFullDeal=true + dealIncome>0 + closer מכיל את שמו
+  const shimriRows = mRows.filter(r =>
+    r.isFullDeal && r.dealIncome > 0 && !r.isSolo &&
+    norm(r.closer).includes(norm('שימרי'))
+  );
+
+  const galRows = mRows.filter(r =>
+    r.isFullDeal && r.dealIncome > 0 && !r.isSolo &&
+    (norm(r.closer).includes(norm('גל הראל')) || norm(r.closer).includes(norm('גל')))
+  );
+
+  renderShimri(shimriRows);
+  renderGal(galRows, year, month);
+
+  // סטטיסטיקות כלליות
+  const allDeals = shimriRows.length + galRows.length;
+  const allIncome = [...shimriRows, ...galRows].reduce((s,r) => s + r.dealIncome, 0);
+  const shimriTotal = shimriRows.reduce((s,r) => s + shimriBonus(r.dealIncome), 0);
+  const galTotalB = calcGalTotal(galRows);
+  const allBonus = shimriTotal + galTotalB;
+
+  document.getElementById('closerStatsRow').style.display = 'grid';
+  document.getElementById('shimriSec').style.display = 'block';
+  document.getElementById('galSec').style.display = 'block';
+  document.getElementById('csTotalDeals').textContent = allDeals;
+  document.getElementById('csTotalIncome').textContent = fmt(allIncome);
+  document.getElementById('csTotalBonus').textContent = fmt(allBonus);
+  document.getElementById('csTotalGrand').textContent = fmt(allBonus + (closerTargets.shimri||0) + (closerTargets.gal||0));
+}
+
+function calcGalTotal(rows) {
+  let bonus = 0;
+  const byDay = {};
+  rows.forEach(r => {
+    bonus += galBonus(r.dealIncome);
+    if (!byDay[r.dateStr]) byDay[r.dateStr] = 0;
+    byDay[r.dateStr] += r.dealIncome;
+  });
+  // בונוס יומי 500 ש"ח לכל יום שהכנסה >= 20,000
+  Object.values(byDay).forEach(dayIncome => {
+    if (dayIncome >= 20000) bonus += 500;
+  });
+  return bonus;
+}
+
+function renderShimri(rows) {
+  const totalDeals = rows.length;
+  const totalIncome = rows.reduce((s,r) => s + r.dealIncome, 0);
+  const totalBonus = rows.reduce((s,r) => s + shimriBonus(r.dealIncome), 0);
+  const target = closerTargets.shimri || 0;
+
+  let h = `<div class="closer-dg">
+    <div class="dcard">
+      <div class="dct">📊 סיכום</div>
+      <div class="brow"><span class="bl2">מספר עסקאות</span><span class="bv" style="color:var(--accent2)">${totalDeals}</span></div>
+      <div class="brow"><span class="bl2">הכנסה כוללת</span><span class="bv">${fmt(totalIncome)}</span></div>
+      <div class="brow"><span class="bl2">בונוס מחושב</span><span class="bv" style="color:var(--green)">${fmt(totalBonus)}</span></div>
+    </div>
+    <div class="dcard">
+      <div class="dct">🎯 יעד אישי</div>
+      <div class="brow"><span class="bl2">בונוס יעד</span>
+        <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
+          oninput="updateCloserTarget('shimri',this.value,${totalBonus})">
+      </div>
+      <div class="brow"><span class="bl2">סה"כ כולל יעד</span>
+        <span class="bv" style="color:var(--gold2);font-size:16px" id="shimriGrand">${fmt(totalBonus+target)}</span>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dct">📐 מודל עמלה</div>
+      <div class="brow"><span class="bl2">עד ₪6,000</span><span class="bv">5%</span></div>
+      <div class="brow"><span class="bl2">₪6,001–₪10,000</span><span class="bv">7%</span></div>
+      <div class="brow"><span class="bl2">₪10,001+</span><span class="bv">10%</span></div>
+    </div>
+  </div>`;
+
+  if (rows.length) {
+    h += `<div class="dcard">
+      <div class="dct">💼 פירוט עסקאות — שימרי</div>
+      <div class="dtw"><table class="dt">
+        <thead><tr><th>תאריך</th><th>בודק</th><th>סכום עסקה</th><th>מדרגה</th><th>בונוס</th></tr></thead><tbody>`;
+    rows.forEach(r => {
+      const b = shimriBonus(r.dealIncome);
+      const tier = r.dealIncome > 10000 ? '10%' : r.dealIncome > 6000 ? '7%' : '5%';
+      h += `<tr>
+        <td>${r.dateStr}</td>
+        <td>${r.checker}</td>
+        <td>${fmt(r.dealIncome)}</td>
+        <td><span class="shim-badge">${tier}</span></td>
+        <td style="color:var(--green);font-weight:700">${fmt(b)}</td>
+      </tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  }
+
+  document.getElementById('shimriDetail').innerHTML = h;
+}
+
+function renderGal(rows, year, month) {
+  const totalDeals = rows.length;
+  const totalIncome = rows.reduce((s,r) => s + r.dealIncome, 0);
+  const target = closerTargets.gal || 0;
+
+  // חישוב בונוס + ימי 20k
+  let baseBonus = 0;
+  const byDay = {};
+  rows.forEach(r => {
+    baseBonus += galBonus(r.dealIncome);
+    if (!byDay[r.dateStr]) byDay[r.dateStr] = { income: 0, deals: 0, bonus: 0 };
+    byDay[r.dateStr].income += r.dealIncome;
+    byDay[r.dateStr].deals++;
+    byDay[r.dateStr].bonus += galBonus(r.dealIncome);
+  });
+
+  let dailyExtraTotal = 0;
+  const extraDays = [];
+  Object.entries(byDay).forEach(([date, day]) => {
+    if (day.income >= 20000) {
+      dailyExtraTotal += 500;
+      extraDays.push({ date, income: day.income });
+    }
+  });
+
+  const totalBonus = baseBonus + dailyExtraTotal;
+
+  let h = `<div class="closer-dg">
+    <div class="dcard">
+      <div class="dct">📊 סיכום</div>
+      <div class="brow"><span class="bl2">מספר עסקאות</span><span class="bv" style="color:var(--accent2)">${totalDeals}</span></div>
+      <div class="brow"><span class="bl2">הכנסה כוללת</span><span class="bv">${fmt(totalIncome)}</span></div>
+      <div class="brow"><span class="bl2">בונוס עסקאות</span><span class="bv" style="color:var(--green)">${fmt(baseBonus)}</span></div>
+      <div class="brow"><span class="bl2">בונוס ימי 20K (${extraDays.length} ימים)</span><span class="bv" style="color:var(--gold2)">${fmt(dailyExtraTotal)}</span></div>
+      <div class="brow" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px">
+        <span style="font-weight:800;color:var(--text)">סה"כ בונוס</span>
+        <span class="bv" style="color:var(--green);font-size:15px">${fmt(totalBonus)}</span>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dct">🎯 יעד אישי</div>
+      <div class="brow"><span class="bl2">בונוס יעד</span>
+        <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
+          oninput="updateCloserTarget('gal',this.value,${totalBonus})">
+      </div>
+      <div class="brow"><span class="bl2">סה"כ כולל יעד</span>
+        <span class="bv" style="color:var(--gold2);font-size:16px" id="galGrand">${fmt(totalBonus+target)}</span>
+      </div>
+    </div>
+    <div class="dcard">
+      <div class="dct">📐 מודל עמלה</div>
+      <div class="brow"><span class="bl2">עד ₪15,000</span><span class="bv">10%</span></div>
+      <div class="brow"><span class="bl2">₪15,001+</span><span class="bv">15%</span></div>
+      <div class="brow"><span class="bl2">יום עם הכנסה ≥ ₪20,000</span><span class="bv" style="color:var(--gold2)">+₪500</span></div>
+    </div>
+  </div>`;
+
+  // ימי בונוס
+  if (extraDays.length) {
+    h += `<div class="dcard" style="margin-bottom:13px">
+      <div class="dct">⭐ ימי הכנסה מעל 20,000 ש"ח</div>`;
+    extraDays.forEach(d => {
+      h += `<div class="brow">
+        <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
+        <span class="bv" style="color:var(--gold2)">+₪500</span>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  // פירוט עסקאות
+  if (rows.length) {
+    h += `<div class="dcard">
+      <div class="dct">💼 פירוט עסקאות — גל הראל</div>
+      <div class="dtw"><table class="dt">
+        <thead><tr><th>תאריך</th><th>בודק</th><th>סכום עסקה</th><th>מדרגה</th><th>בונוס</th></tr></thead><tbody>`;
+    rows.forEach(r => {
+      const b = galBonus(r.dealIncome);
+      const tier = r.dealIncome > 15000 ? '15%' : '10%';
+      h += `<tr>
+        <td>${r.dateStr}</td>
+        <td>${r.checker}</td>
+        <td>${fmt(r.dealIncome)}</td>
+        <td><span class="gal-badge">${tier}</span></td>
+        <td style="color:var(--green);font-weight:700">${fmt(b)}</td>
+      </tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  }
+
+  document.getElementById('galDetail').innerHTML = h;
+}
+
+function updateCloserTarget(who, val, baseBonus) {
+  const num = parseFloat(val) || 0;
+  closerTargets[who] = num;
+  const el = document.getElementById(who === 'shimri' ? 'shimriGrand' : 'galGrand');
+  if (el) el.textContent = fmt(baseBonus + num);
+  // עדכן סה"כ
+  const shimriB = parseFloat(document.getElementById('shimriDetail')?.querySelector('#shimriGrand')?.dataset?.base || 0);
+  const allBonus = (closerTargets.shimri||0) + (closerTargets.gal||0);
+  const grandEl = document.getElementById('csTotalGrand');
+  if (grandEl) {
+    const base = parseFloat(document.getElementById('csTotalBonus')?.textContent?.replace(/[^\d]/g,''))||0;
+    grandEl.textContent = fmt(base + allBonus);
+  }
+}
+</script>
+</body>
+</html>
