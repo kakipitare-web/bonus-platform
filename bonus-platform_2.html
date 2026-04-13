@@ -145,6 +145,7 @@
 <div class="tabs">
   <button class="tab active" onclick="switchTab('checkers',this)">📋 נציגי בדיקה</button>
   <button class="tab" onclick="switchTab('closers',this)">🤝 נציגי סגירה</button>
+  <button class="tab" onclick="switchTab('analytics',this)">📈 ניתוח רווחיות</button>
 </div>
 
 <div id="tabCheckers">
@@ -288,6 +289,34 @@
     <button class="btn" onclick="calculateClosers()">⚡ חשב סוגרים</button>
   </div>
 </div><!-- end tabClosers -->
+
+
+<!-- ═══ TAB ניתוח ═══ -->
+<div id="tabAnalytics" style="display:none">
+  <div class="closer-stats" id="analyticsStats" style="display:none">
+    <div class="sc bl"><div class="sl">הכנסה כללית</div><div class="sv" id="anTotalIncome">₪0</div></div>
+    <div class="sc go"><div class="sl">סה"כ בונוסים</div><div class="sv" id="anTotalBonus">₪0</div></div>
+    <div class="sc gr"><div class="sl">רווח נקי לחברה</div><div class="sv" id="anTotalProfit">₪0</div></div>
+    <div class="sc pu"><div class="sl">שולי רווח</div><div class="sv" id="anMargin">0%</div></div>
+  </div>
+  <div class="csec" id="agentIncomeSec" style="display:none">
+    <div class="chead"><div class="ctitle">💰 הכנסה לחברה לפי נציג</div><div class="model-badge">הכנסה בדיקות + סגירות</div></div>
+    <div id="agentIncomeContent" style="padding:16px 18px;"></div>
+  </div>
+  <div class="csec" id="teamsSec" style="display:none">
+    <div class="chead"><div class="ctitle">🤝 ביצועי צוותים</div><div class="model-badge">בודק + סוגר לפי עסקאות משותפות</div></div>
+    <div id="teamsContent" style="padding:16px 18px;"></div>
+  </div>
+  <div class="csec" id="profitSec" style="display:none">
+    <div class="chead"><div class="ctitle">📊 רווחיות נציגים</div><div class="model-badge">הכנסה שהביא פחות הבונוס שקיבל</div></div>
+    <div id="profitContent" style="padding:16px 18px;"></div>
+  </div>
+  <div id="analyticsEmpty" style="text-align:center;padding:60px 20px;color:var(--text3)">
+    <div style="font-size:44px;margin-bottom:10px">📈</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text2);margin-bottom:5px">אין נתונים להצגה</div>
+    <div style="font-size:12px">טען נתונים וחשב בונוסים בטאב "נציגי בדיקה" תחילה</div>
+  </div>
+</div><!-- end tabAnalytics -->
 
 </div>
 <div class="toast" id="toast"></div>
@@ -907,8 +936,10 @@ function updateGlobalTarget(val) {
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tabCheckers').style.display = tab === 'checkers' ? 'block' : 'none';
-  document.getElementById('tabClosers').style.display  = tab === 'closers'  ? 'block' : 'none';
+  document.getElementById('tabCheckers').style.display  = tab === 'checkers'  ? 'block' : 'none';
+  document.getElementById('tabClosers').style.display   = tab === 'closers'   ? 'block' : 'none';
+  document.getElementById('tabAnalytics').style.display = tab === 'analytics' ? 'block' : 'none';
+  if (tab === 'analytics') renderAnalytics();
 }
 
 // ── חישוב בונוס שימרי ──
@@ -1148,6 +1179,140 @@ function updateCloserTarget(who, val, baseBonus) {
     grandEl.textContent = fmt(base + allBonus);
   }
 }
+
+// ════════════════════════════════════════
+// מודול ניתוח רווחיות
+// ════════════════════════════════════════
+function renderAnalytics() {
+  const ag = Object.values(results);
+  const empty = document.getElementById('analyticsEmpty');
+  if (!ag.length || !csvData.length) {
+    empty.style.display='block';
+    ['analyticsStats','agentIncomeSec','teamsSec','profitSec'].forEach(id=>document.getElementById(id).style.display='none');
+    return;
+  }
+  empty.style.display='none';
+
+  const mv = document.getElementById('monthPicker').value;
+  if (!mv) return;
+  const [year, month] = mv.split('-').map(Number);
+
+  const mRows = csvData.filter(r => {
+    const d = pd(r.dateStr);
+    return d.getFullYear()===year && d.getMonth()===month-1;
+  });
+
+  // הכנסה לפי נציג
+  const agentData = ag.map(a => {
+    const checkIncome = a.checkRows.filter(r=>r.checkIncome>0).reduce((s,r)=>s+r.checkIncome,0);
+    const closeIncome = a.closeRows.reduce((s,r)=>s+r.dealIncome,0);
+    const income = checkIncome + closeIncome;
+    const bonus  = a.total;
+    return { name:a.name, income, bonus, profit: income - bonus };
+  });
+
+  // צוותים
+  const teams = {};
+  mRows.forEach(r => {
+    if (!r.isFullDeal || r.dealIncome<=0 || r.isSolo || !r.checker || !r.closer) return;
+    const key = r.checker.trim() + ' + ' + r.closer.trim();
+    if (!teams[key]) teams[key] = { checker:r.checker.trim(), closer:r.closer.trim(), deals:0, income:0 };
+    teams[key].deals++;
+    teams[key].income += r.dealIncome;
+  });
+  const teamsSorted = Object.values(teams).sort((a,b)=>b.income-a.income);
+
+  // סטטיסטיקות
+  const totalIncome = agentData.reduce((s,a)=>s+a.income,0);
+  const totalBonus  = agentData.reduce((s,a)=>s+a.bonus,0);
+  const totalProfit = totalIncome - totalBonus;
+  const margin      = totalIncome>0 ? Math.round((totalProfit/totalIncome)*100) : 0;
+
+  document.getElementById('analyticsStats').style.display='grid';
+  document.getElementById('anTotalIncome').textContent  = fmt(totalIncome);
+  document.getElementById('anTotalBonus').textContent   = fmt(totalBonus);
+  document.getElementById('anTotalProfit').textContent  = fmt(totalProfit);
+  document.getElementById('anMargin').textContent       = margin+'%';
+
+  const medals = ['🥇','🥈','🥉'];
+
+  // הכנסה לפי נציג
+  document.getElementById('agentIncomeSec').style.display='block';
+  const incomeSorted = [...agentData].sort((a,b)=>b.income-a.income);
+  const maxIncome = Math.max(...incomeSorted.map(a=>a.income),1);
+  let h='';
+  incomeSorted.forEach((a,i)=>{
+    const pct=Math.round((a.income/maxIncome)*100);
+    h+=`<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${medals[i]||(i+1)+'.'}</span>
+          <span style="font-weight:700;font-size:14px">${a.name}</span>
+        </div>
+        <span style="font-weight:800;font-size:14px;color:var(--green)">${fmt(a.income)}</span>
+      </div>
+      <div style="background:var(--border);border-radius:20px;height:10px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;border-radius:20px;background:${i===0?'linear-gradient(90deg,var(--green),#34d399)':i===1?'linear-gradient(90deg,var(--accent),var(--accent2))':'linear-gradient(90deg,var(--purple),#a78bfa)'};transition:width .6s"></div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('agentIncomeContent').innerHTML=h;
+
+  // צוותים
+  document.getElementById('teamsSec').style.display='block';
+  if (!teamsSorted.length) {
+    document.getElementById('teamsContent').innerHTML='<div style="color:var(--text3);font-size:13px;padding:10px 0">לא נמצאו עסקאות צוות בחודש זה</div>';
+  } else {
+    const maxT=Math.max(...teamsSorted.map(t=>t.income),1);
+    let th='';
+    teamsSorted.forEach((t,i)=>{
+      const pct=Math.round((t.income/maxT)*100);
+      th+=`<div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">${medals[i]||(i+1)+'.'}</span>
+            <span style="font-weight:700;font-size:13px">${t.checker} <span style="color:var(--text3)">+</span> ${t.closer}</span>
+          </div>
+          <div style="text-align:left">
+            <div style="font-weight:800;color:var(--green);font-size:14px">${fmt(t.income)}</div>
+            <div style="font-size:11px;color:var(--text3)">${t.deals} עסקאות</div>
+          </div>
+        </div>
+        <div style="background:var(--border);border-radius:20px;height:8px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;border-radius:20px;background:linear-gradient(90deg,var(--gold),var(--gold2));transition:width .6s"></div>
+        </div>
+      </div>`;
+    });
+    document.getElementById('teamsContent').innerHTML=th;
+  }
+
+  // רווחיות
+  document.getElementById('profitSec').style.display='block';
+  const profitSorted=[...agentData].sort((a,b)=>b.profit-a.profit);
+  const maxP=Math.max(...profitSorted.map(a=>Math.abs(a.profit)),1);
+  let ph=`<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr>
+      ${['נציג','הכנסה שהביא','בונוס שקיבל','רווח לחברה','מד רווחיות'].map(h=>`<th style="background:var(--surface2);padding:9px 12px;text-align:right;color:var(--text3);font-size:11px;text-transform:uppercase;border-bottom:1px solid var(--border)">${h}</th>`).join('')}
+    </tr></thead><tbody>`;
+  profitSorted.forEach((a,i)=>{
+    const pct=Math.max(Math.round((a.profit/maxP)*100),0);
+    const pc=a.profit>=0?'var(--green)':'var(--red)';
+    ph+=`<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
+      <td style="padding:10px 12px;font-weight:700">${medals[i]||''} ${a.name}</td>
+      <td style="padding:10px 12px;color:var(--text2)">${fmt(a.income)}</td>
+      <td style="padding:10px 12px;color:var(--red)">${fmt(a.bonus)}</td>
+      <td style="padding:10px 12px;font-weight:800;color:${pc}">${fmt(a.profit)}</td>
+      <td style="padding:10px 12px;min-width:120px">
+        <div style="background:var(--border);border-radius:20px;height:8px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;border-radius:20px;background:${a.profit>=0?'linear-gradient(90deg,var(--green),#34d399)':'var(--red)'};transition:width .6s"></div>
+        </div>
+      </td>
+    </tr>`;
+  });
+  ph+=`</tbody></table></div>`;
+  document.getElementById('profitContent').innerHTML=ph;
+}
+
 </script>
 </body>
 </html>
