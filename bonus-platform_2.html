@@ -576,7 +576,7 @@ async function loadFromSheets(){
   }
 }
 
-
+function handleFile(e){
   const f=e.target.files[0];if(!f)return;
   const r=new FileReader();
   r.onload=ev=>{
@@ -877,7 +877,7 @@ function renderLeaderboard(mode){
   document.getElementById('leaderContent').innerHTML=h;
 }
 
-
+function fmt(n){
   if(!n&&n!==0)return'₪0';
   return'₪'+Math.round(n).toLocaleString('he-IL');
 }
