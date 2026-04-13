@@ -349,6 +349,7 @@ function updateTarget(agentName, val){
 
   // עדכון stat card סה"כ
   document.getElementById('sTotal').textContent=fmt(totGrand);
+  saveToLocal();
 }
 
 // ── מדרגות בדיקות ──
@@ -931,6 +932,7 @@ let closerTargets = { shimri: 0, gal: 0 };
 function updateGlobalTarget(val) {
   globalTarget = parseFloat(val) || 0;
   document.getElementById('sTotal').textContent = fmt(baseBonusTotal + globalTarget);
+  saveToLocal();
 }
 
 function switchTab(tab, btn) {
@@ -1166,6 +1168,7 @@ function renderGal(rows, year, month) {
 }
 
 function updateCloserTarget(who, val, baseBonus) {
+  saveToLocal();
   const num = parseFloat(val) || 0;
   closerTargets[who] = num;
   const el = document.getElementById(who === 'shimri' ? 'shimriGrand' : 'galGrand');
@@ -1312,6 +1315,40 @@ function renderAnalytics() {
   ph+=`</tbody></table></div>`;
   document.getElementById('profitContent').innerHTML=ph;
 }
+
+
+// ── שמירה וטעינה מ-localStorage ──
+function saveToLocal() {
+  try {
+    localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses));
+    localStorage.setItem('bonusGlobalTarget', globalTarget);
+    localStorage.setItem('bonusMonth', document.getElementById('monthPicker').value);
+    localStorage.setItem('bonusCloserTargets', JSON.stringify(closerTargets));
+  } catch(e) {}
+}
+
+function loadFromLocal() {
+  try {
+    const targets = localStorage.getItem('bonusTargets');
+    if (targets) targetBonuses = JSON.parse(targets);
+
+    const gt = localStorage.getItem('bonusGlobalTarget');
+    if (gt) {
+      globalTarget = parseFloat(gt) || 0;
+      const inp = document.getElementById('globalTargetInput');
+      if (inp && globalTarget) inp.value = globalTarget;
+    }
+
+    const month = localStorage.getItem('bonusMonth');
+    if (month) document.getElementById('monthPicker').value = month;
+
+    const ct = localStorage.getItem('bonusCloserTargets');
+    if (ct) closerTargets = JSON.parse(ct);
+  } catch(e) {}
+}
+
+// טען בעת פתיחה
+window.addEventListener('DOMContentLoaded', loadFromLocal);
 
 </script>
 </body>
