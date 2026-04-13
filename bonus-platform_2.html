@@ -554,8 +554,7 @@ function calcAgent(name,rows,year,month){
 }
 
 // ── טעינה מ-Google Sheets ──
-const SHEET_ID   = '1Ol7wj6n7_qpTO1fuXrjFGCHJG1ROhKsw05FWzTwB6GE';
-const SHEET_NAME = 'חברת עתיד שבירת שיאים חדשים , מלחמה ! ';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhorHaZZXE24yxdnHlBY_Pc9Hhtz1MPfYpHyjbju3HHidZ028VWme5BWoPCodvQqds/exec';
 
 async function loadFromSheets(){
   const statusEl = document.getElementById('sheetsStatus');
@@ -563,9 +562,7 @@ async function loadFromSheets(){
   statusEl.style.color = 'var(--accent2)';
 
   try {
-    const encodedName = encodeURIComponent(SHEET_NAME);
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodedName}`;
-    const resp = await fetch(url);
+    const resp = await fetch(APPS_SCRIPT_URL);
     if (!resp.ok) throw new Error('שגיאת חיבור');
     const text = await resp.text();
     csvData = parseCSV(text);
@@ -573,7 +570,7 @@ async function loadFromSheets(){
     statusEl.style.color = 'var(--green)';
     toast(`✅ נטענו ${csvData.length} שורות מ-Google Sheets`);
   } catch(err) {
-    statusEl.textContent = '❌ שגיאה בחיבור — ודא שהגיליון ציבורי';
+    statusEl.textContent = '❌ שגיאה בחיבור — נסה שוב';
     statusEl.style.color = 'var(--red)';
     toast('❌ שגיאה בטעינה מ-Google Sheets');
   }
