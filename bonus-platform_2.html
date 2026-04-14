@@ -256,6 +256,13 @@
 <!-- ═══ TAB סוגרים ═══ -->
 <div id="tabClosers" style="display:none">
 
+<!-- בחירת סוגר -->
+<div class="asel" style="margin-bottom:18px">
+  <button class="abtn active" id="closerBtnAll" onclick="selectCloser('all',this)">כל הסוגרים</button>
+  <button class="abtn" id="closerBtnShimri" onclick="selectCloser('shimri',this)">שימרי</button>
+  <button class="abtn" id="closerBtnGal" onclick="selectCloser('gal',this)">גל הראל</button>
+</div>
+
 <div class="closer-stats" id="closerStatsRow" style="display:none">
   <div class="sc bl"><div class="sl">סה"כ עסקאות</div><div class="sv" id="csTotalDeals">0</div></div>
   <div class="sc go"><div class="sl">הכנסה כוללת</div><div class="sv" id="csTotalIncome">₪0</div></div>
@@ -349,7 +356,6 @@ function updateTarget(agentName, val){
 
   // עדכון stat card סה"כ
   document.getElementById('sTotal').textContent=fmt(totGrand);
-  saveToLocal();
 }
 
 // ── מדרגות בדיקות ──
@@ -417,7 +423,7 @@ function parseRow(cols,year){
     // פורמט 2025
     checker    = cols[9]?.trim()||'';
     closerCell = cols[10]?.trim()||'';
-    isFullDeal = cols[11]?.trim().toUpperCase()==='TRUE';
+    isFullDeal = (cols[11]||'').trim().toUpperCase()==='TRUE';
     payMethod  = cols[12]?.trim()||'';
     checkIncome= pn(cols[13]);
     dealIncome = pn(cols[14]);
@@ -429,7 +435,7 @@ function parseRow(cols,year){
   } else {
     // פורמט 2026 — col[9] מכיל הכל
     const raw9  = cols[9]?.trim()||'';
-    isFullDeal  = cols[11]?.trim().toUpperCase()==='TRUE';
+    isFullDeal  = (cols[11]||'').trim().toUpperCase()==='TRUE';
     payMethod   = cols[12]?.trim()||'';
     checkIncome = pn(cols[13]);
     dealIncome  = pn(cols[14]);
@@ -584,7 +590,7 @@ function calcAgent(name,rows,year,month){
 }
 
 // ── טעינה מ-Google Sheets ──
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzhorHaZZXE24yxdnHlBY_Pc9Hhtz1MPfYpHyjbju3HHidZ028VWme5BWoPCodvQqds/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIPpqRxpYKTyXYxMZ-4J_E3qe6BsoZvH0AeSeQnIG5csyvoT_hpfM4Gv9clTIIqpix/exec';
 
 async function loadFromSheets(){
   const statusEl = document.getElementById('sheetsStatus');
@@ -932,7 +938,6 @@ let closerTargets = { shimri: 0, gal: 0 };
 function updateGlobalTarget(val) {
   globalTarget = parseFloat(val) || 0;
   document.getElementById('sTotal').textContent = fmt(baseBonusTotal + globalTarget);
-  saveToLocal();
 }
 
 function switchTab(tab, btn) {
@@ -1168,7 +1173,6 @@ function renderGal(rows, year, month) {
 }
 
 function updateCloserTarget(who, val, baseBonus) {
-  saveToLocal();
   const num = parseFloat(val) || 0;
   closerTargets[who] = num;
   const el = document.getElementById(who === 'shimri' ? 'shimriGrand' : 'galGrand');
@@ -1315,40 +1319,6 @@ function renderAnalytics() {
   ph+=`</tbody></table></div>`;
   document.getElementById('profitContent').innerHTML=ph;
 }
-
-
-// ── שמירה וטעינה מ-localStorage ──
-function saveToLocal() {
-  try {
-    localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses));
-    localStorage.setItem('bonusGlobalTarget', globalTarget);
-    localStorage.setItem('bonusMonth', document.getElementById('monthPicker').value);
-    localStorage.setItem('bonusCloserTargets', JSON.stringify(closerTargets));
-  } catch(e) {}
-}
-
-function loadFromLocal() {
-  try {
-    const targets = localStorage.getItem('bonusTargets');
-    if (targets) targetBonuses = JSON.parse(targets);
-
-    const gt = localStorage.getItem('bonusGlobalTarget');
-    if (gt) {
-      globalTarget = parseFloat(gt) || 0;
-      const inp = document.getElementById('globalTargetInput');
-      if (inp && globalTarget) inp.value = globalTarget;
-    }
-
-    const month = localStorage.getItem('bonusMonth');
-    if (month) document.getElementById('monthPicker').value = month;
-
-    const ct = localStorage.getItem('bonusCloserTargets');
-    if (ct) closerTargets = JSON.parse(ct);
-  } catch(e) {}
-}
-
-// טען בעת פתיחה
-window.addEventListener('DOMContentLoaded', loadFromLocal);
 
 </script>
 </body>
