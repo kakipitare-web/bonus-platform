@@ -125,7 +125,24 @@
   .closer-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
   .gal-badge{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#34d399;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
   .shim-badge{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#60a5fa;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
-  @media(max-width:900px){.controls{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(3,1fr);}.dg{grid-template-columns:1fr;}}
+  @media(max-width:900px){
+    .controls{grid-template-columns:1fr;}
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .dg{grid-template-columns:1fr;}
+    .tabs{flex-wrap:wrap;gap:6px;}
+    .tab{padding:7px 12px;font-size:12px;flex:1;min-width:120px;text-align:center;}
+    .closer-stats{grid-template-columns:repeat(2,1fr)!important;}
+    header{flex-direction:column;align-items:flex-start;gap:10px;}
+    .hbadge{display:none;}
+  }
+  @media(max-width:600px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .closer-stats{grid-template-columns:repeat(2,1fr)!important;}
+    .tabs{gap:5px;}
+    .tab{padding:6px 8px;font-size:11px;}
+    .wrap{padding:16px 12px;}
+    .sc .sv{font-size:18px;}
+  }
 </style>
 </head>
 <body>
@@ -328,13 +345,13 @@
 <!-- ═══ TAB שכר עובדים ═══ -->
 <div id="tabSalary" style="display:none">
 
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1;margin-left:16px">
-      <div class="sc bl"><div class="sl">סה"כ עובדים</div><div class="sv" id="salTotalEmp">0</div></div>
-      <div class="sc go"><div class="sl">סה"כ שכר ברוטו</div><div class="sv" id="salTotalGross">₪0</div></div>
-      <div class="sc gr"><div class="sl">סה"כ נטו לתשלום</div><div class="sv" id="salTotalNet">₪0</div></div>
-    </div>
-    <button class="btn" onclick="generatePDF()" style="white-space:nowrap;background:linear-gradient(135deg,#10b981,#059669)">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+    <div class="sc bl"><div class="sl">סה"כ עובדים</div><div class="sv" id="salTotalEmp">0</div></div>
+    <div class="sc go"><div class="sl">סה"כ שכר ברוטו</div><div class="sv" id="salTotalGross">₪0</div></div>
+    <div class="sc gr"><div class="sl">סה"כ נטו לתשלום</div><div class="sv" id="salTotalNet">₪0</div></div>
+  </div>
+  <div style="margin-bottom:18px">
+    <button class="btn" onclick="generatePDF()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);font-size:15px;height:48px;">
       📄 הפק דוח לרואת חשבון
     </button>
   </div>
