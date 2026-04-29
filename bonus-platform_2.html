@@ -436,6 +436,7 @@ let csvData=[], results={};
 // שמירת בונוסי יעד לכל נציג (נשמר גם בין חישובים)
 let targetBonuses={};
 let deductions={};
+let sheetsDeductions=[];
 
 function saveDeduction(agentName){
   const input = document.getElementById('ded-input-'+agentName);
@@ -736,7 +737,7 @@ function calcAgent(name,rows,year,month){
 }
 
 // ── טעינה מ-Google Sheets ──
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIPpqRxpYKTyXYxMZ-4J_E3qe6BsoZvH0AeSeQnIG5csyvoT_hpfM4Gv9clTIIqpix/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyagQyYxJzUML3kBojT6B_eOey-SAWWGUboV6iBO_wZkSmO597N3AcZEkNKaJArFMpH/exec';
 
 async function loadFromSheets(){
   const statusEl = document.getElementById('sheetsStatus');
@@ -788,6 +789,20 @@ function calculate(){
   const banner=document.getElementById('monthBanner');
   banner.style.display='block';
   banner.textContent=`📅 מציג נתונים עבור: ${MHE[month-1]} ${year}`;
+
+  // טען הכחשות לפי חודש
+  const monthStr = String(month).padStart(2,'0') + '/' + year;
+  deductions = {};
+  sheetsDeductions.forEach(d => {
+    if(d.month === monthStr && d.amount > 0) {
+      deductions[d.name] = (deductions[d.name]||0) + d.amount;
+    }
+  });
+  // הוסף הכחשות שנשמרו ידנית ב-localStorage
+  try {
+    const localDed = JSON.parse(localStorage.getItem('deductions_'+monthStr)||'{}');
+    Object.keys(localDed).forEach(k => { deductions[k] = (deductions[k]||0) + (localDed[k]||0); });
+  } catch(e){}
 
   renderSummary(year,month,MHE);
   renderAlerts();
@@ -1087,6 +1102,42 @@ function toast(msg){
 
 const now=new Date();
 document.getElementById('monthPicker').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+// טעינה אוטומטית בכניסה לאתר
+window.addEventListener('DOMContentLoaded', async () => {
+  const statusEl = document.getElementById('sheetsStatus');
+  if(statusEl) {
+    statusEl.textContent = '⏳ טוען נתונים...';
+    statusEl.style.color = 'var(--accent2)';
+  }
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL);
+    if(!resp.ok) throw new Error('שגיאה');
+    const text = await resp.text();
+    csvData = parseCSV(text);
+    if(statusEl) {
+      statusEl.textContent = `✓ נטענו ${csvData.length} שורות מ-Google Sheets`;
+      statusEl.style.color = 'var(--green)';
+    }
+    // טעינת הכחשות מ-Sheets
+    try {
+      const dedResp = await fetch(APPS_SCRIPT_URL + '?type=deductions');
+      const dedText = await dedResp.text();
+      const dedData = JSON.parse(dedText);
+      dedData.forEach(d => {
+        if(d.amount > 0) {
+          deductions[d.name] = (deductions[d.name]||0) + d.amount;
+        }
+      });
+      sheetsDeductions = dedData;
+    } catch(e2) { console.log('deductions load error', e2); }
+  } catch(e) {
+    if(statusEl) {
+      statusEl.textContent = '❌ שגיאה בטעינה — לחץ ידנית';
+      statusEl.style.color = 'var(--red)';
+    }
+  }
+});
 
 
 // ════════════════════════════════════════
