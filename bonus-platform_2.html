@@ -794,7 +794,13 @@ function calculate(){
   const monthStr = String(month).padStart(2,'0') + '/' + year;
   deductions = {};
   sheetsDeductions.forEach(d => {
-    if(d.month === monthStr && d.amount > 0) {
+    // השווה חודש — תומך גם בפורמט תאריך מלא וגם ב-04/2026
+    let dedMonth = d.month;
+    if(dedMonth && dedMonth.includes('GMT')) {
+      const dt = new Date(dedMonth);
+      dedMonth = String(dt.getMonth()+1).padStart(2,'0') + '/' + dt.getFullYear();
+    }
+    if(dedMonth === monthStr && d.amount > 0) {
       deductions[d.name] = (deductions[d.name]||0) + d.amount;
     }
   });
@@ -820,7 +826,8 @@ function renderSummary(year,month,MHE){
   document.getElementById('sFives').textContent=ag.reduce((s,a)=>s+a.extraDetails.length,0);
   document.getElementById('sCloseB').textContent=fmt(ag.reduce((s,a)=>s+a.closeB+a.extraB,0));
   baseBonusTotal = ag.reduce((s,a)=>s+a.total,0);
-  document.getElementById('sTotal').textContent=fmt(baseBonusTotal + globalTarget);
+  const totalDeductions = ag.reduce((s,a)=>s+(deductions[a.name]||0),0);
+  document.getElementById('sTotal').textContent=fmt(baseBonusTotal + globalTarget - totalDeductions);
 
   let h=`<table><thead><tr>
     <th>נציג</th><th>מדרגה</th><th>בדיקות נטו</th><th>הכנסה בדיקות</th>
