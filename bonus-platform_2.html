@@ -435,6 +435,50 @@ const CHECKERS=['שרית','ניקול','איטל','ניתאי','טופז','רו
 let csvData=[], results={};
 // שמירת בונוסי יעד לכל נציג (נשמר גם בין חישובים)
 let targetBonuses={};
+let deductions={};
+
+function saveDeduction(agentName){
+  const input = document.getElementById('ded-input-'+agentName);
+  const btn   = document.getElementById('ded-btn-'+agentName);
+  const num   = parseFloat(input.value)||0;
+  deductions[agentName] = num;
+
+  // עדכן סה"כ
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById('grand-'+agentName);
+    if(cell) cell.textContent = fmt(a.total+(targetBonuses[agentName]||0)-num);
+  }
+  const ag = Object.values(results);
+  const gc = document.getElementById('grandTotalCell');
+  if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
+
+  // שמור
+  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+
+  // הצג ✓
+  btn.textContent = '✓';
+  btn.style.background = 'rgba(16,185,129,.2)';
+  btn.style.borderColor = 'rgba(16,185,129,.4)';
+  btn.style.color = 'var(--green)';
+  setTimeout(()=>{ btn.textContent='💾'; btn.style.background='rgba(239,68,68,.2)'; btn.style.borderColor='rgba(239,68,68,.4)'; btn.style.color='var(--red)'; }, 2000);
+}
+
+function updateDeduction(agentName, val){
+  const num = parseFloat(val)||0;
+  deductions[agentName] = num;
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById("grand-"+agentName);
+    if(cell) cell.textContent = fmt(a.total+(targetBonuses[agentName]||0)-num);
+  }
+  // עדכן שורת סה"כ
+  const ag = Object.values(results);
+  const gc = document.getElementById("grandTotalCell");
+  if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
+  // שמור
+  try { localStorage.setItem("deductions", JSON.stringify(deductions)); } catch(e){}
+}
 
 function updateTarget(agentName, val){
   const num=parseFloat(val)||0;
@@ -768,7 +812,8 @@ function renderSummary(year,month,MHE){
     <th>בונוס בדיקות</th><th>סגירות ✓</th><th>בונוס סגירות</th>
     <th>חמישיות 🖐</th><th>בונוס יומי</th>
     <th style="color:var(--gold2)">🎯 בונוס יעד</th>
-    <th>סה"כ כולל יעד</th>
+    <th style="color:var(--red)">⬇ הכחשות</th>
+    <th>סה"כ סופי</th>
   </tr></thead><tbody>`;
 
   ag.forEach(a=>{
@@ -790,8 +835,22 @@ function renderSummary(year,month,MHE){
           value="${savedTarget||''}" placeholder="0 ₪" min="0"
           oninput="updateTarget('${a.name}',this.value)">
       </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" class="target-input" data-agent="ded-${a.name}"
+          value="${deductions[a.name]||''}" placeholder="0 ₪" min="0"
+          style="border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);color:var(--red);width:75px;"
+          id="ded-input-${a.name}">
+        <button onclick="saveDeduction('${a.name}')" id="ded-btn-${a.name}"
+          style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);
+                 border-radius:8px;padding:5px 8px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;
+                 font-weight:700;white-space:nowrap">
+          💾
+        </button>
+        </div>
+      </td>
       <td class="pos grand-total-cell" id="grand-${a.name}" style="font-size:15px;font-weight:800">
-        ${fmt(a.total+(savedTarget||0))}
+        ${fmt(a.total+(savedTarget||0)-(deductions[a.name]||0))}
       </td>
     </tr>`;
   });
@@ -806,7 +865,8 @@ function renderSummary(year,month,MHE){
     <td style="color:var(--gold2)">${ag.reduce((s,a)=>s+a.extraDetails.length,0)||'—'}</td>
     <td>${fmt(ag.reduce((s,a)=>s+a.extraB,0))}</td>
     <td id="totalTargetCell" style="color:var(--gold2);font-weight:800">${fmt(ag.reduce((s,a)=>s+(targetBonuses[a.name]||0),0))}</td>
-    <td id="grandTotalCell" style="color:var(--gold2);font-size:16px">${fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0),0))}</td>
+    <td style="color:var(--red);font-weight:800">-${fmt(ag.reduce((s,a)=>s+(deductions[a.name]||0),0))}</td>
+    <td id="grandTotalCell" style="color:var(--gold2);font-size:16px">${fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0))}</td>
   </tr></tbody></table>`;
 
   document.getElementById('sumContent').innerHTML=h;
@@ -1034,8 +1094,25 @@ document.getElementById('monthPicker').value=`${now.getFullYear()}-${String(now.
 // ════════════════════════════════════════
 
 let globalTarget = 0;
-let baseBonusTotal = 0; // נשמר לחישוב עם יעד
+let baseBonusTotal = 0;
 let closerTargets = { shimri: 0, gal: 0 };
+let closerDeductions = { shimri: 0, gal: 0 };
+
+function saveCloserDeduction(who, baseBonus) {
+  const input = document.getElementById('ded-'+who);
+  const btn   = document.getElementById('ded-btn-'+who);
+  const num   = parseFloat(input.value)||0;
+  closerDeductions[who] = num;
+  const target = closerTargets[who]||0;
+  const el = document.getElementById(who==='shimri'?'shimriGrand':'galGrand');
+  if(el) el.textContent = fmt(baseBonus + target - num);
+  try { localStorage.setItem('closerDeductions', JSON.stringify(closerDeductions)); } catch(e){}
+  btn.textContent = '✓';
+  btn.style.background = 'rgba(16,185,129,.2)';
+  btn.style.borderColor = 'rgba(16,185,129,.4)';
+  btn.style.color = 'var(--green)';
+  setTimeout(()=>{ btn.textContent='💾'; btn.style.background='rgba(239,68,68,.2)'; btn.style.borderColor='rgba(239,68,68,.4)'; btn.style.color='var(--red)'; }, 2000);
+}
 
 function updateGlobalTarget(val) {
   globalTarget = parseFloat(val) || 0;
@@ -1149,8 +1226,20 @@ function renderShimri(rows) {
         <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
           oninput="updateCloserTarget('shimri',this.value,${totalBonus})">
       </div>
-      <div class="brow"><span class="bl2">סה"כ כולל יעד</span>
-        <span class="bv" style="color:var(--gold2);font-size:16px" id="shimriGrand">${fmt(totalBonus+target)}</span>
+      <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" class="target-input" value="${closerDeductions.shimri||''}" placeholder="0 ₪" min="0"
+            id="ded-shimri"
+            style="border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);color:var(--red);width:75px;">
+          <button onclick="saveCloserDeduction('shimri',${totalBonus})" id="ded-btn-shimri"
+            style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);
+                   border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">
+            💾
+          </button>
+        </div>
+      </div>
+      <div class="brow"><span class="bl2">סה"כ סופי</span>
+        <span class="bv" style="color:var(--gold2);font-size:16px" id="shimriGrand">${fmt(totalBonus+target-(closerDeductions.shimri||0))}</span>
       </div>
     </div>
     <div class="dcard">
@@ -1228,8 +1317,20 @@ function renderGal(rows, year, month) {
         <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
           oninput="updateCloserTarget('gal',this.value,${totalBonus})">
       </div>
-      <div class="brow"><span class="bl2">סה"כ כולל יעד</span>
-        <span class="bv" style="color:var(--gold2);font-size:16px" id="galGrand">${fmt(totalBonus+target)}</span>
+      <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" class="target-input" value="${closerDeductions.gal||''}" placeholder="0 ₪" min="0"
+            id="ded-gal"
+            style="border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);color:var(--red);width:75px;">
+          <button onclick="saveCloserDeduction('gal',${totalBonus})" id="ded-btn-gal"
+            style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);
+                   border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">
+            💾
+          </button>
+        </div>
+      </div>
+      <div class="brow"><span class="bl2">סה"כ סופי</span>
+        <span class="bv" style="color:var(--gold2);font-size:16px" id="galGrand">${fmt(totalBonus+target-(closerDeductions.gal||0))}</span>
       </div>
     </div>
     <div class="dcard">
@@ -1634,6 +1735,15 @@ function updateSvcHours(key, val, rate, cellId) {
   try {
     const saved = localStorage.getItem('salaryHours');
     if (saved) salaryHours = JSON.parse(saved);
+  } catch(e) {}
+  // טעינת הכחשות
+  try {
+    const ded = localStorage.getItem('deductions');
+    if (ded) deductions = JSON.parse(ded);
+  } catch(e) {}
+  try {
+    const cd = localStorage.getItem('closerDeductions');
+    if (cd) closerDeductions = JSON.parse(cd);
   } catch(e) {}
 })();
 
