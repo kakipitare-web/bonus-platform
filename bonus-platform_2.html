@@ -1629,7 +1629,7 @@ function renderSummary(year,month,MHE){
   document.getElementById('sTotal').textContent=fmt(baseBonusTotal + globalTarget - totalDeductions);
 
   let h=`<table><thead><tr>
-    <th>נציג</th><th>מדרגה</th><th>בדיקות נטו</th><th>הכנסה בדיקות</th>
+    <th>נציג</th><th>מדרגה</th><th>בדיקות נטו</th><th>⏱ שעות</th><th>שכר בסיס</th>
     <th>בונוס בדיקות</th><th>סגירות ✓</th><th>בונוס סגירות</th>
     <th>חמישיות 🖐</th><th>בונוס יומי</th>
     <th style="color:var(--gold2)">🎯 בונוס יעד</th>
@@ -1648,7 +1648,8 @@ function renderSummary(year,month,MHE){
         ${a.netCount}
         ${deductions[a.name]>0?`<br><span style="font-size:10px;color:var(--red);font-weight:700">הכחשה -${fmt(deductions[a.name])}</span>`:''}
       </td>
-      <td class="${a.totalIncome<0?'neg':'neu'}">${fmt(a.totalIncome)}</td>
+      <td style="color:var(--gold2);font-weight:700">${salaryHours['sal_'+a.name]||'—'}</td>
+      <td class="neu">${salaryHours['sal_'+a.name]?fmt((SALES_AGENTS_SAL.find(s=>s.name===a.name)||{rate:0}).rate*(salaryHours['sal_'+a.name]||0)):'—'}</td>
       <td class="pos">${fmt(a.checkB)}</td>
       <td style="font-weight:700;color:var(--accent2)">${a.closeCount}</td>
       <td class="pos">${fmt(a.closeB)}</td>
@@ -1682,7 +1683,8 @@ function renderSummary(year,month,MHE){
   h+=`<tr class="trow">
     <td>סה"כ</td><td></td>
     <td>${ag.reduce((s,a)=>s+Math.max(0,a.netCount),0)}</td>
-    <td>${fmt(ag.reduce((s,a)=>s+a.totalIncome,0))}</td>
+    <td style="color:var(--gold2)">${SALES_AGENTS_SAL.reduce((s,sa)=>s+(salaryHours['sal_'+sa.name]||0),0)}</td>
+    <td>${fmt(SALES_AGENTS_SAL.reduce((s,sa)=>s+sa.rate*(salaryHours['sal_'+sa.name]||0),0))}</td>
     <td>${fmt(ag.reduce((s,a)=>s+a.checkB,0))}</td>
     <td style="color:var(--accent2)">${ag.reduce((s,a)=>s+a.closeCount,0)}</td>
     <td>${fmt(ag.reduce((s,a)=>s+a.closeB,0))}</td>
@@ -2916,21 +2918,23 @@ function generatePDF() {
 
 <h3>📋 נציגי בדיקה</h3>
 <table>
-  <thead><tr><th>שם</th><th>שעות</th><th>הכנסה בדיקות</th><th>בונוס</th><th>סה"כ לתלוש</th></tr></thead>
+  <thead><tr><th>שם</th><th>שעות</th><th>שכר בסיס</th><th>בונוס</th><th>הכחשות</th><th>סה"כ לתלוש</th></tr></thead>
   <tbody>
     ${checkerRows.map(r=>`<tr>
       <td>${r.name}</td>
       <td>${r.hours||'—'}</td>
       <td>₪${r.gross.toLocaleString('he-IL')}</td>
       <td>₪${r.bonus.toLocaleString('he-IL')}</td>
-      <td><strong>₪${(r.gross+r.bonus).toLocaleString('he-IL')}</strong></td>
+      <td style="color:#e53e3e">${r.ded>0?'-₪'+r.ded.toLocaleString('he-IL'):'—'}</td>
+      <td><strong>₪${(r.gross+r.bonus-r.ded).toLocaleString('he-IL')}</strong></td>
     </tr>`).join('')}
     <tr class="total-row">
       <td>סה"כ</td>
       <td>${checkerRows.reduce((s,r)=>s+(r.hours||0),0)}</td>
       <td>₪${checkerRows.reduce((s,r)=>s+r.gross,0).toLocaleString('he-IL')}</td>
       <td>₪${checkerRows.reduce((s,r)=>s+r.bonus,0).toLocaleString('he-IL')}</td>
-      <td>₪${checkerRows.reduce((s,r)=>s+r.gross+r.bonus,0).toLocaleString('he-IL')}</td>
+      <td style="color:#e53e3e">-₪${checkerRows.reduce((s,r)=>s+(r.ded||0),0).toLocaleString('he-IL')}</td>
+      <td>₪${checkerRows.reduce((s,r)=>s+r.gross+r.bonus-(r.ded||0),0).toLocaleString('he-IL')}</td>
     </tr>
   </tbody>
 </table>
