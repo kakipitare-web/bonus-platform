@@ -2872,13 +2872,15 @@ function generatePDF() {
   })() : 'לא נבחר חודש';
 
   // איסוף נתוני בודקים
-  const checkerRows = Object.values(results).map(a => ({
-    name: a.name,
-    hours: (salaryHours['sal_'+a.name] || salaryHours['sal_'+a.name.split(' ')[0]] || 0),
-    gross: a.checkRows ? Math.round(a.checkRows.filter(r=>r.checkIncome>0).reduce((s,r)=>s+r.checkIncome,0)) : 0,
-    bonus: a.total || 0,
-    category: 'נציגי בדיקה'
-  }));
+  const checkerRows = Object.values(results).map(a => {
+    const salAgent = SALES_AGENTS_SAL.find(s => s.name === a.name || s.name.includes(a.name.split(' ')[0]) || a.name.includes(s.name.split(' ')[0]));
+    const hours = salaryHours['sal_'+a.name] || (salAgent ? salaryHours['sal_'+salAgent.name] : 0) || 0;
+    const rate  = salAgent ? salAgent.rate : 0;
+    const gross = Math.round(rate * hours);
+    const ded   = deductions[a.name] || 0;
+    const bonus = Math.round(a.total - ded);
+    return { name: a.name, hours, gross, bonus, ded };
+  });
 
   // שימרי
   const shimriHours = salaryHours['cls_שימרי אבו גזל'] || 0;
