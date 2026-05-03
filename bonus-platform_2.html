@@ -1551,9 +1551,10 @@ async function loadFromSheets(){
     if (!resp.ok) throw new Error('שגיאת חיבור');
     const text = await resp.text();
     csvData = parseCSV(text);
-    statusEl.textContent = `✓ נטענו ${csvData.length} שורות מ-Google Sheets`;
+    statusEl.textContent = `✓ נטענו ${csvData.length} שורות`;
     statusEl.style.color = 'var(--green)';
-    toast(`✅ נטענו ${csvData.length} שורות מ-Google Sheets`);
+    setTimeout(()=>{ statusEl.textContent=''; }, 3000);
+    toast(`✅ נטענו ${csvData.length} שורות`);
   } catch(err) {
     statusEl.textContent = '❌ שגיאה בחיבור — נסה שוב';
     statusEl.style.color = 'var(--red)';
@@ -1612,6 +1613,8 @@ function calculate(){
     Object.keys(localDed).forEach(k => { deductions[k] = (deductions[k]||0) + (localDed[k]||0); });
   } catch(e){}
 
+  // שמור חודש
+  try { localStorage.setItem('bonusMonth', document.getElementById('monthPicker').value); } catch(e){}
   renderSummary(year,month,MHE);
   renderAlerts();
   renderLeaderboard('checks');
@@ -2063,10 +2066,11 @@ async function autoLoadSheets() {
     const text = await resp.text();
     csvData = parseCSV(text);
     if(statusEl) {
-      statusEl.textContent = `✓ נטענו ${csvData.length} שורות מ-Google Sheets`;
+      statusEl.textContent = `✓ נטענו ${csvData.length} שורות`;
       statusEl.style.color = 'var(--green)';
-      setTimeout(()=>{ statusEl.textContent=''; }, 4000);
+      setTimeout(()=>{ statusEl.textContent=''; }, 3000);
     }
+    toast(`✅ נטענו ${csvData.length} שורות מ-Google Sheets`);
     // טעינת הכחשות מ-Sheets
     try {
       const dedResp = await fetch(APPS_SCRIPT_URL + '?type=deductions');
@@ -2150,6 +2154,22 @@ let baseBonusTotal = 0;
 let closerTargets = { shimri: 0, gal: 0 };
 let closerDeductions = { shimri: 0, gal: 0 };
 
+function saveCloserTarget(who, baseBonus) {
+  const input = document.getElementById('tgt-'+who);
+  const btn   = document.getElementById('tgt-btn-'+who);
+  if(!input) return;
+  const num = parseFloat(input.value)||0;
+  closerTargets[who] = num;
+  const ded = closerDeductions[who]||0;
+  const el = document.getElementById(who==='shimri'?'shimriGrand':'galGrand');
+  if(el) el.textContent = fmt(baseBonus + num - ded);
+  try { localStorage.setItem('closerTargets', JSON.stringify(closerTargets)); } catch(e){}
+  if(btn){
+    btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='rgba(245,158,11,.4)';btn.style.color='var(--gold2)';},2000);
+  }
+}
+
 function saveCloserDeduction(who, baseBonus) {
   const input = document.getElementById('ded-'+who);
   const btn   = document.getElementById('ded-btn-'+who);
@@ -2179,7 +2199,7 @@ function switchTab(tab, btn) {
   document.getElementById('tabAnalytics').style.display = tab === 'analytics' ? 'block' : 'none';
   document.getElementById('tabSalary').style.display    = tab === 'salary'    ? 'block' : 'none';
   if (tab === 'analytics') renderAnalytics();
-  if (tab === 'salary')    renderSalary();
+  if (tab === 'salary' && !document.getElementById('salesBody').innerHTML) renderSalary();
 }
 
 // ── חישוב בונוס שימרי ──
@@ -2275,8 +2295,15 @@ function renderShimri(rows) {
     <div class="dcard">
       <div class="dct">🎯 יעד אישי</div>
       <div class="brow"><span class="bl2">בונוס יעד</span>
-        <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
-          oninput="updateCloserTarget('shimri',this.value,${totalBonus})">
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
+            id="tgt-shimri" style="width:75px">
+          <button onclick="saveCloserTarget('shimri',${totalBonus})" id="tgt-btn-shimri"
+            style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold2);
+                   border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">
+            💾
+          </button>
+        </div>
       </div>
       <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
         <div style="display:flex;gap:5px;align-items:center">
@@ -2366,8 +2393,15 @@ function renderGal(rows, year, month) {
     <div class="dcard">
       <div class="dct">🎯 יעד אישי</div>
       <div class="brow"><span class="bl2">בונוס יעד</span>
-        <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
-          oninput="updateCloserTarget('gal',this.value,${totalBonus})">
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0"
+            id="tgt-gal" style="width:75px">
+          <button onclick="saveCloserTarget('gal',${totalBonus})" id="tgt-btn-gal"
+            style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold2);
+                   border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">
+            💾
+          </button>
+        </div>
       </div>
       <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
         <div style="display:flex;gap:5px;align-items:center">
@@ -2430,6 +2464,7 @@ function renderGal(rows, year, month) {
 }
 
 function updateCloserTarget(who, val, baseBonus) {
+  try { localStorage.setItem('closerTargets', JSON.stringify(closerTargets)); } catch(e){}
   const num = parseFloat(val) || 0;
   closerTargets[who] = num;
   const el = document.getElementById(who === 'shimri' ? 'shimriGrand' : 'galGrand');
@@ -2782,12 +2817,11 @@ function updateSvcHours(key, val, rate, cellId) {
   try { localStorage.setItem('salaryHours', JSON.stringify(salaryHours)); } catch(e){}
 }
 
-(function loadSalaryHours() {
+(function loadAllData() {
   try {
     const saved = localStorage.getItem('salaryHours');
     if (saved) salaryHours = JSON.parse(saved);
   } catch(e) {}
-  // טעינת הכחשות
   try {
     const ded = localStorage.getItem('deductions');
     if (ded) deductions = JSON.parse(ded);
@@ -2795,6 +2829,21 @@ function updateSvcHours(key, val, rate, cellId) {
   try {
     const cd = localStorage.getItem('closerDeductions');
     if (cd) closerDeductions = JSON.parse(cd);
+  } catch(e) {}
+  try {
+    const bt = localStorage.getItem('bonusTargets');
+    if (bt) targetBonuses = JSON.parse(bt);
+  } catch(e) {}
+  try {
+    const ct = localStorage.getItem('closerTargets');
+    if (ct) closerTargets = JSON.parse(ct);
+  } catch(e) {}
+  try {
+    const month = localStorage.getItem('bonusMonth');
+    if (month) {
+      const picker = document.getElementById('monthPicker');
+      if (picker) picker.value = month;
+    }
   } catch(e) {}
 })();
 
