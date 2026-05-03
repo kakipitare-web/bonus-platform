@@ -1237,35 +1237,7 @@ let targetBonuses={};
 let deductions={};
 let sheetsDeductions=[];
 
-function saveTarget(agentName){
-  const safeId = agentName.replace(/\s+/g,'-');
-  const input = document.getElementById('tgt-input-'+safeId) || document.querySelector(`[data-agent="${agentName}"]`);
-  const btn   = document.getElementById('tgt-btn-'+safeId);
-  const num   = parseFloat(input?.value)||0;
-  targetBonuses[agentName] = num;
 
-  // עדכן סה"כ
-  const a = results[agentName];
-  if(a){
-    const cell = document.getElementById('grand-'+agentName);
-    if(cell) cell.textContent = fmt(a.total + num - (deductions[agentName]||0));
-  }
-  const ag = Object.values(results);
-  const gc = document.getElementById('grandTotalCell');
-  if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
-
-  // שמור
-  try { localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses)); } catch(e){}
-
-  // הצג ✓
-  if(btn){
-    btn.textContent='✓';
-    btn.style.background='rgba(16,185,129,.2)';
-    btn.style.borderColor='rgba(16,185,129,.4)';
-    btn.style.color='var(--green)';
-    setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='rgba(245,158,11,.4)';btn.style.color='var(--gold2)';},2000);
-  }
-}
 
 function saveDeduction(agentName){
   const safeId = agentName.replace(/\s+/g,'-');
@@ -1705,7 +1677,7 @@ function renderSummary(year,month,MHE){
           value="${deductions[a.name]||''}" placeholder="0 ₪" min="0"
           style="border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);color:var(--red);width:75px;"
           id="ded-input-${a.name.replace(/\s+/g,'-')}">
-        <button onclick="saveDeduction('${a.name}')" id="ded-btn-${a.name.replace(/\s+/g,'-')}"
+        <button onclick="saveDeductionFixed('${a.name}')" id="ded-btn-${a.name.replace(/\s+/g,'-')}"
           style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);
                  border-radius:8px;padding:5px 8px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;
                  font-weight:700;white-space:nowrap">
@@ -2079,7 +2051,7 @@ const now=new Date();
 document.getElementById('monthPicker').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 
 // טעינה אוטומטית בכניסה לאתר
-window.addEventListener('DOMContentLoaded', async () => {
+async function autoLoadSheets() {
   const statusEl = document.getElementById('sheetsStatus');
   if(statusEl) {
     statusEl.textContent = '⏳ טוען נתונים...';
@@ -2113,8 +2085,61 @@ window.addEventListener('DOMContentLoaded', async () => {
       statusEl.style.color = 'var(--red)';
     }
   }
-});
+}
 
+// ── 2. Hide status message everywhere - not just sheets section
+function hideStatus() {
+  const statusEl = document.getElementById('sheetsStatus');
+  if(statusEl) statusEl.textContent = '';
+}
+
+// ── 3. Fix target save button IDs
+function saveTarget(agentName){
+  const safeId = agentName.replace(/\s+/g,'-');
+  const input = document.getElementById('tgt-input-'+safeId);
+  const btn   = document.getElementById('tgt-btn-'+safeId);
+  if(!input) return;
+  const num = parseFloat(input.value)||0;
+  targetBonuses[agentName] = num;
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById('grand-'+agentName);
+    if(cell) cell.textContent = fmt(a.total + num - (deductions[agentName]||0));
+  }
+  const ag = Object.values(results);
+  const gc = document.getElementById('grandTotalCell');
+  if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
+  try { localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses)); } catch(e){}
+  if(btn){
+    btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='rgba(245,158,11,.4)';btn.style.color='var(--gold2)';},2000);
+  }
+}
+
+// ── 4. Fix deduction save button
+function saveDeductionFixed(agentName){
+  const safeId = agentName.replace(/\s+/g,'-');
+  const input = document.getElementById('ded-input-'+safeId);
+  const btn   = document.getElementById('ded-btn-'+safeId);
+  if(!input) return;
+  const num = parseFloat(input.value)||0;
+  deductions[agentName] = num;
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById('grand-'+agentName);
+    if(cell) cell.textContent = fmt(a.total+(targetBonuses[agentName]||0)-num);
+  }
+  const ag = Object.values(results);
+  const gc = document.getElementById('grandTotalCell');
+  if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
+  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+  if(btn){
+    btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(239,68,68,.2)';btn.style.borderColor='rgba(239,68,68,.4)';btn.style.color='var(--red)';},2000);
+  }
+}
+
+window.addEventListener('load', autoLoadSheets);
 
 // ════════════════════════════════════════
 // מודול סוגרים
