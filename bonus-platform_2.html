@@ -1764,17 +1764,25 @@ function renderSummary(year,month,MHE){
       <div class="ac-inputs">
         <div class="ac-input-row">
           <label class="ac-input-label" style="color:var(--gold)">🎯 בונוס יעד</label>
-          <input type="number" class="target-input" value="${savedTarget||''}" placeholder="0 ₪" min="0"
-            oninput="updateTarget('${a.name}',this.value);syncCardTotal('${a.name}')">
+          <div style="display:flex;align-items:center;gap:6px">
+            <input type="number" class="target-input" value="${savedTarget||''}" placeholder="0 ₪" min="0"
+              id="tgt-input-m-${a.name.replace(/\s+/g,'-')}"
+              oninput="updateTarget('${a.name}',this.value);syncCardTotal('${a.name}')" style="width:70px">
+            <button onclick="saveMobileTgt('${a.name}')" id="tgt-btn-m-${a.name.replace(/\s+/g,'-')}"
+              style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold);
+                     border-radius:8px;padding:5px 9px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:700">
+              💾
+            </button>
+          </div>
         </div>
         <div class="ac-input-row">
           <label class="ac-input-label" style="color:var(--red)">⬇ הכחשות</label>
           <div style="display:flex;align-items:center;gap:6px">
             <input type="number" class="target-input" value="${deductions[a.name]||''}" placeholder="0 ₪" min="0"
               style="border-color:oklch(85% 0.10 25);background:var(--red-soft);color:var(--red);width:70px;"
-              id="ded-input-m-${a.name}"
+              id="ded-input-m-${a.name.replace(/\s+/g,'-')}"
               oninput="updateDeduction('${a.name}',this.value);syncCardTotal('${a.name}')">
-            <button onclick="document.getElementById('ded-input-${a.name}')?(document.getElementById('ded-input-${a.name}').value=document.getElementById('ded-input-m-${a.name}').value):0;saveDeduction('${a.name}')"
+            <button onclick="saveMobileDed('${a.name}')" id="ded-btn-m-${a.name.replace(/\s+/g,'-')}"
               style="background:var(--red-soft);border:1px solid oklch(85% 0.10 25);color:var(--red);
                      border-radius:8px;padding:5px 9px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:700">
               💾
@@ -2153,6 +2161,53 @@ let globalTarget = 0;
 let baseBonusTotal = 0;
 let closerTargets = { shimri: 0, gal: 0 };
 let closerDeductions = { shimri: 0, gal: 0 };
+
+
+function saveMobileDed(agentName) {
+  const safeId = agentName.replace(/\s+/g,'-');
+  const input = document.getElementById('ded-input-m-'+safeId);
+  const btn   = document.getElementById('ded-btn-m-'+safeId);
+  if(!input) return;
+  const num = parseFloat(input.value)||0;
+  deductions[agentName] = num;
+  // sync to table input
+  const tableInput = document.getElementById('ded-input-'+safeId);
+  if(tableInput) tableInput.value = num||'';
+  // update grand total
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById('grand-'+agentName);
+    if(cell) cell.textContent = fmt(a.total+(targetBonuses[agentName]||0)-num);
+  }
+  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+  if(btn){
+    btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='💾';btn.style.background='var(--red-soft)';btn.style.color='var(--red)';},2000);
+  }
+}
+
+function saveMobileTgt(agentName) {
+  const safeId = agentName.replace(/\s+/g,'-');
+  const input = document.getElementById('tgt-input-m-'+safeId);
+  const btn   = document.getElementById('tgt-btn-m-'+safeId);
+  if(!input) return;
+  const num = parseFloat(input.value)||0;
+  targetBonuses[agentName] = num;
+  // sync to table input
+  const tableInput = document.getElementById('tgt-input-'+safeId);
+  if(tableInput) tableInput.value = num||'';
+  // update grand total
+  const a = results[agentName];
+  if(a){
+    const cell = document.getElementById('grand-'+agentName);
+    if(cell) cell.textContent = fmt(a.total+num-(deductions[agentName]||0));
+  }
+  try { localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses)); } catch(e){}
+  if(btn){
+    btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.color='var(--green)';
+    setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.color='var(--gold)';},2000);
+  }
+}
 
 function saveCloserTarget(who, baseBonus) {
   const input = document.getElementById('tgt-'+who);
