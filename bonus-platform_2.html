@@ -2991,14 +2991,23 @@ function generatePDF() {
     const hours = salaryHours['sal_'+a.name] || (salAgent ? salaryHours['sal_'+salAgent.name] : 0) || 0;
     const rate  = salAgent ? salAgent.rate : 0;
     const gross = Math.round(rate * hours);
-    const ded   = deductions[a.name] || 0;
-    const bonus = Math.round(a.total - ded);
-    return { name: a.name, hours, gross, bonus, ded };
+    const ded    = deductions[a.name] || 0;
+    const target = targetBonuses[a.name] || 0;
+    const bonus  = Math.round(a.total + target - ded);
+    return { name: a.name, hours, gross, bonus, ded: 0 }; // ded already included in bonus
   });
 
   // שימרי
   const shimriHours = salaryHours['cls_שימרי אבו גזל'] || 0;
   const shimriGross = 45 * shimriHours;
+  // בונוס שימרי מחושב
+  const shimriBonus = (() => {
+    const el = document.getElementById('shimriDetail');
+    if (!el) return closerTargets.shimri||0;
+    const txt = el.innerText || '';
+    const m = txt.match(/בונוס מחושב[^\d]*(\d[\d,]*)/);
+    return m ? parseInt(m[1].replace(/,/g,'')) : 0;
+  })();
 
   // גל הראל
   const galBonus = (() => {
@@ -3034,23 +3043,21 @@ function generatePDF() {
 
 <h3>📋 נציגי בדיקה</h3>
 <table>
-  <thead><tr><th>שם</th><th>שעות</th><th>שכר בסיס</th><th>בונוס</th><th>הכחשות</th><th>סה"כ לתלוש</th></tr></thead>
+  <thead><tr><th>שם</th><th>שעות</th><th>שכר בסיס</th><th>בונוס סופי (כולל יעד ובניכוי הכחשות)</th><th>סה"כ לתלוש</th></tr></thead>
   <tbody>
     ${checkerRows.map(r=>`<tr>
       <td>${r.name}</td>
       <td>${r.hours||'—'}</td>
       <td>₪${r.gross.toLocaleString('he-IL')}</td>
       <td>₪${r.bonus.toLocaleString('he-IL')}</td>
-      <td style="color:#e53e3e">${r.ded>0?'-₪'+r.ded.toLocaleString('he-IL'):'—'}</td>
-      <td><strong>₪${(r.gross+r.bonus-r.ded).toLocaleString('he-IL')}</strong></td>
+      <td><strong>₪${(r.gross+r.bonus).toLocaleString('he-IL')}</strong></td>
     </tr>`).join('')}
     <tr class="total-row">
       <td>סה"כ</td>
       <td>${checkerRows.reduce((s,r)=>s+(r.hours||0),0)}</td>
       <td>₪${checkerRows.reduce((s,r)=>s+r.gross,0).toLocaleString('he-IL')}</td>
       <td>₪${checkerRows.reduce((s,r)=>s+r.bonus,0).toLocaleString('he-IL')}</td>
-      <td style="color:#e53e3e">-₪${checkerRows.reduce((s,r)=>s+(r.ded||0),0).toLocaleString('he-IL')}</td>
-      <td>₪${checkerRows.reduce((s,r)=>s+r.gross+r.bonus-(r.ded||0),0).toLocaleString('he-IL')}</td>
+      <td>₪${checkerRows.reduce((s,r)=>s+r.gross+r.bonus,0).toLocaleString('he-IL')}</td>
     </tr>
   </tbody>
 </table>
@@ -3063,15 +3070,15 @@ function generatePDF() {
       <td>שימרי אבו גזל</td>
       <td>${shimriHours||'—'}</td>
       <td>₪${shimriGross.toLocaleString('he-IL')}</td>
-      <td>₪${(closerTargets.shimri||0).toLocaleString('he-IL')}</td>
-      <td><strong>₪${(shimriGross+(closerTargets.shimri||0)).toLocaleString('he-IL')}</strong></td>
+      <td>₪${shimriBonus.toLocaleString('he-IL')}</td>
+      <td><strong>₪${(shimriGross+shimriBonus+(closerTargets.shimri||0)-(closerDeductions.shimri||0)).toLocaleString('he-IL')}</strong></td>
     </tr>
     <tr>
       <td>גל הראל</td>
       <td>—</td>
       <td>₪8,000</td>
-      <td>₪${(closerTargets.gal||0).toLocaleString('he-IL')}</td>
-      <td><strong>₪${(8000+(closerTargets.gal||0)-(closerDeductions.gal||0)).toLocaleString('he-IL')}</strong></td>
+      <td>₪${galBonus.toLocaleString('he-IL')}</td>
+      <td><strong>₪${(8000+galBonus+(closerTargets.gal||0)-(closerDeductions.gal||0)).toLocaleString('he-IL')}</strong></td>
     </tr>
     <tr style="background:#fff9e6">
       <td>צבי אבו גזל <span style="font-size:10px;color:#888">(פיצול שימרי)</span></td>
