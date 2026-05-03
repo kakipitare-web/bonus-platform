@@ -2741,30 +2741,41 @@ function renderSalary() {
   let closersHtml = '';
   CLOSERS_SAL.forEach((a, i) => {
     let gross, net;
-    if (a.fixedNet) { gross = a.fixedGross; net = a.fixedNet; }
-    else {
+    if (a.fixedNet) {
+      // גל הראל — שכר קבוע בלבד, בלי בונוס (כנגד חשבונית)
+      gross = a.fixedGross; net = a.fixedNet;
+      totalGross += gross; totalNet += net;
+      closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
+        <td style="padding:10px 13px;font-weight:700">${a.name}</td>
+        <td style="padding:10px 13px;color:var(--text2)">שכר קבוע</td>
+        <td style="padding:10px 13px;text-align:center;color:var(--text3)">—</td>
+        <td style="padding:10px 13px;font-weight:700;color:var(--green)">₪${net.toLocaleString('he-IL')} נטו</td>
+      </tr>`;
+    } else {
+      // שימרי — שכר שעתי + בונוס סופי מטאב הסוגרים
       const h = salaryHours['cls_'+a.name] || 0;
       gross = Math.round(a.rate * h);
-      net   = Math.round(gross * a.netRatio);
-    }
-    totalGross += gross; totalNet += net;
-    const hoursCell = a.fixedNet
-      ? `<td style="padding:10px 13px;text-align:center;color:var(--text3)">קבוע</td>`
-      : `<td style="padding:10px 13px;text-align:center">
-          <input type="number" min="0" max="300" value="${salaryHours['cls_'+a.name]||''}" placeholder="0"
+      // קרא בונוס סופי ישירות מ-shimriGrand
+      const finalBonus = (() => {
+        const el = document.getElementById('shimriGrand');
+        if (el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+        return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
+      })();
+      totalGross += gross + finalBonus;
+      closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
+        <td style="padding:10px 13px;font-weight:700">${a.name}</td>
+        <td style="padding:10px 13px;color:var(--text2)">₪${a.rate}/שעה</td>
+        <td style="padding:10px 13px;text-align:center">
+          <input type="number" min="0" max="300" value="${h||''}" placeholder="0"
             style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
                    color:var(--gold2);padding:5px 8px;border-radius:8px;
                    font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;
                    width:75px;text-align:center;"
             oninput="updateSalHours('cls_${a.name}',this.value,'closers',${i},${a.rate},${a.netRatio})">
-         </td>`;
-    closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
-      <td style="padding:10px 13px;font-weight:700">${a.name}</td>
-      <td style="padding:10px 13px;color:var(--text2)">${a.fixedNet?'שכר קבוע':'₪'+a.rate+'/שעה'}</td>
-      ${hoursCell}
-      <td style="padding:10px 13px;color:var(--text2)">₪${gross.toLocaleString('he-IL')}</td>
-      <td style="padding:10px 13px;font-weight:800;color:var(--green)">₪${net.toLocaleString('he-IL')}</td>
-    </tr>`;
+        </td>
+        <td style="padding:10px 13px;color:var(--text2)">₪${gross.toLocaleString('he-IL')} + <span style="color:var(--green)">₪${finalBonus.toLocaleString('he-IL')} בונוס</span></td>
+      </tr>`;
+    }
   });
   document.getElementById('closersBody').innerHTML = closersHtml;
 
@@ -3055,13 +3066,11 @@ function generatePDF() {
   // שימרי
   const shimriHours = salaryHours['cls_שימרי אבו גזל'] || 0;
   const shimriGross = 45 * shimriHours;
-  // בונוס שימרי מחושב
-  const shimriBonus = (() => {
-    const el = document.getElementById('shimriDetail');
-    if (!el) return closerTargets.shimri||0;
-    const txt = el.innerText || '';
-    const m = txt.match(/בונוס מחושב[^\d]*(\d[\d,]*)/);
-    return m ? parseInt(m[1].replace(/,/g,'')) : 0;
+  // בונוס סופי של שימרי — ישירות מ-shimriGrand (כולל בונוס + יעד - הכחשות)
+  const shimriFinalBonus = (() => {
+    const el = document.getElementById('shimriGrand');
+    if (el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+    return 0;
   })();
 
   // גל הראל
@@ -3125,15 +3134,15 @@ function generatePDF() {
       <td>שימרי אבו גזל</td>
       <td>${shimriHours||'—'}</td>
       <td>₪${shimriGross.toLocaleString('he-IL')}</td>
-      <td>₪${shimriBonus.toLocaleString('he-IL')}</td>
-      <td><strong>₪${(shimriGross+shimriBonus+(closerTargets.shimri||0)-(closerDeductions.shimri||0)).toLocaleString('he-IL')}</strong></td>
+      <td>₪${shimriFinalBonus.toLocaleString('he-IL')}</td>
+      <td><strong>₪${(shimriGross+shimriFinalBonus).toLocaleString('he-IL')}</strong></td>
     </tr>
     <tr>
       <td>גל הראל</td>
       <td>—</td>
       <td>₪8,000</td>
-      <td>₪${galBonus.toLocaleString('he-IL')}</td>
-      <td><strong>₪${(8000+galBonus+(closerTargets.gal||0)-(closerDeductions.gal||0)).toLocaleString('he-IL')}</strong></td>
+      <td>—</td>
+      <td><strong>₪8,000</strong></td>
     </tr>
     <tr style="background:#fff9e6">
       <td>צבי אבו גזל <span style="font-size:10px;color:#888">(פיצול שימרי)</span></td>
