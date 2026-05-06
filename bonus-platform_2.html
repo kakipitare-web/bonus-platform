@@ -951,6 +951,9 @@ body.dark .bottom-nav{background:rgba(10,14,26,.92);}
 </div>
 
 <div class="csec" id="galSec" style="display:none">
+</div>
+<div class="csec" id="barSec" style="display:none">
+</div>
   <div class="chead">
     <div class="ctitle">💼 גל הראל — נציגת סגירה</div>
     <div class="model-badge">10% / 15% + יומי 500</div>
@@ -1505,6 +1508,15 @@ function calcAgent(name,rows,year,month){
     if(r.isSolo){
       bonus=r.dealIncome*.10;
       type='סולו 10%';
+    } else if(
+      // בודק שסגר עם בודק אחר (פורמט "בודק / בודק") → 5%
+      r.closer && r.closerCell.includes('/') &&
+      !norm(r.closer).includes(norm('שימרי')) &&
+      !norm(r.closer).includes(norm('גל')) &&
+      !norm(r.closer).includes(norm('בר'))
+    ){
+      bonus=r.dealIncome*.05;
+      type='בודק סגר 5%';
     } else {
       bonus=closureBonus(r.closureAmt);
       type='טבלה';
@@ -2151,7 +2163,17 @@ function saveDeductionFixed(agentName){
   }
 }
 
-window.addEventListener('load', autoLoadSheets);
+// טעינה אוטומטית עם retry
+function startAutoLoad() {
+  autoLoadSheets().then(() => {
+    if(!csvData || csvData.length === 0) {
+      setTimeout(autoLoadSheets, 2000);
+    }
+  }).catch(() => {
+    setTimeout(autoLoadSheets, 2000);
+  });
+}
+window.addEventListener('load', startAutoLoad);
 
 // ════════════════════════════════════════
 // מודול סוגרים
@@ -2271,6 +2293,10 @@ function shimriBonus(dealIncome) {
 // ── חישוב בונוס גל הראל ──
 // עד 15,000 → 10% | מעל 15,000 → 15%
 // בונוס אקסטרה: כל יום שהכנסה >= 20,000 → +500 ש"ח
+function barKamfBonus(dealIncome) {
+  return Math.round(dealIncome * 0.10);
+}
+
 function galBonus(dealIncome) {
   if (dealIncome <= 0) return 0;
   if (dealIncome <= 15000) return dealIncome * 0.10;
@@ -2300,15 +2326,24 @@ function calculateClosers() {
     (norm(r.closer).includes(norm('גל הראל')) || norm(r.closer).includes(norm('גל')))
   );
 
+  // בר קמף — 10%
+  const barRows = mRows.filter(r =>
+    r.isFullDeal && r.dealIncome > 0 && !r.isSolo &&
+    (norm(r.closer).includes(norm('בר קמף')) || norm(r.closer).includes(norm('בר')))
+  );
+
   renderShimri(shimriRows);
   renderGal(galRows, year, month);
+  renderBar(barRows);
+
+  const barTotal = barRows.reduce((s,r) => s + barKamfBonus(r.dealIncome), 0);
 
   // סטטיסטיקות כלליות
-  const allDeals = shimriRows.length + galRows.length;
-  const allIncome = [...shimriRows, ...galRows].reduce((s,r) => s + r.dealIncome, 0);
+  const allDeals = shimriRows.length + galRows.length + barRows.length;
+  const allIncome = [...shimriRows, ...galRows, ...barRows].reduce((s,r) => s + r.dealIncome, 0);
   const shimriTotal = shimriRows.reduce((s,r) => s + shimriBonus(r.dealIncome), 0);
   const galTotalB = calcGalTotal(galRows);
-  const allBonus = shimriTotal + galTotalB;
+  const allBonus = shimriTotal + galTotalB + barTotal;
 
   document.getElementById('closerStatsRow').style.display = 'grid';
   document.getElementById('shimriSec').style.display = 'block';
@@ -2317,6 +2352,56 @@ function calculateClosers() {
   document.getElementById('csTotalIncome').textContent = fmt(allIncome);
   document.getElementById('csTotalBonus').textContent = fmt(allBonus);
   document.getElementById('csTotalGrand').textContent = fmt(allBonus + (closerTargets.shimri||0) + (closerTargets.gal||0));
+}
+
+function renderBar(rows=[]) {
+  const sec = document.getElementById('barSec');
+  if(!sec) return;
+  if(!rows || rows.length===0){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  const totalBonus = rows.reduce((s,r)=>s+barKamfBonus(r.dealIncome),0);
+  const target = closerTargets.bar||0;
+  const ded = closerDeductions.bar||0;
+  let h = `<div class="closer-card">
+    <div class="ctitle">💼 בר קמף — נציג סגירה</div>
+    <div class="cstats">
+      <div class="cstat"><div class="csv">${rows.length}</div><div class="csl">סגירות</div></div>
+      <div class="cstat"><div class="csv">${fmt(rows.reduce((s,r)=>s+r.dealIncome,0))}</div><div class="csl">הכנסה</div></div>
+      <div class="cstat"><div class="csv" style="color:var(--green)">${fmt(totalBonus)}</div><div class="csl">בונוס 10%</div></div>
+    </div>
+    <div class="dcard">
+      <div class="dct">🎯 יעד אישי</div>
+      <div class="brow"><span class="bl2">בונוס יעד</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" class="target-input" value="${target||''}" placeholder="0 ₪" min="0" id="tgt-bar" style="width:75px">
+          <button onclick="saveCloserTarget('bar',${totalBonus})" id="tgt-btn-bar"
+            style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold2);border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">💾</button>
+        </div>
+      </div>
+      <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" value="${ded||''}" placeholder="0 ₪" min="0" id="ded-bar"
+            style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:5px 8px;border-radius:8px;font-family:'Heebo',sans-serif;font-size:13px;width:75px">
+          <button onclick="saveCloserDeduction('bar',${totalBonus})" id="ded-btn-bar"
+            style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">💾</button>
+        </div>
+      </div>
+      <div class="brow" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+        <span style="font-weight:800">סה"כ סופי</span>
+        <span style="color:var(--gold2);font-size:18px;font-weight:900" id="barGrand">${fmt(totalBonus+target-ded)}</span>
+      </div>
+    </div>
+    <div class="dcard" id="barDetail">
+      <div class="dct">💼 פירוט עסקאות — בר קמף</div>
+      ${rows.map(r=>`
+      <div style="padding:10px 0;border-bottom:1px solid rgba(30,45,69,.3);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <div style="flex:1;min-width:100px"><span style="font-size:11px;color:var(--text3)">${r.dateStr}</span><br><span style="font-weight:700">${r.closerCell}</span></div>
+        <div style="text-align:center"><span style="font-size:11px;color:var(--text3)">עסקה</span><br><span>${fmt(r.dealIncome)}</span></div>
+        <div style="text-align:center"><span style="font-size:11px;color:var(--text3)">בונוס</span><br><span style="color:var(--green);font-weight:800">${fmt(barKamfBonus(r.dealIncome))}</span></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  sec.innerHTML = h;
 }
 
 function calcGalTotal(rows) {
@@ -2687,6 +2772,7 @@ const SALES_AGENTS_SAL = [
 const CLOSERS_SAL = [
   { name: 'שימרי אבו גזל', rate: 45, netRatio: 0.683 },
   { name: 'גל הראל',       rate: 0,  fixedNet: 8000, fixedGross: 8000 },
+  { name: 'בר קמף',        rate: 40, netRatio: 0.85 },
 ];
 
 const OTHERS_SAL = [
