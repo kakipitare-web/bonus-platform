@@ -574,19 +574,22 @@ td{padding:11px 13px;font-size:13px;vertical-align:middle;color:var(--text);}
   position:fixed;
   bottom:88px;
   left:50%;
-  transform:translateX(-50%) translateY(100px);
+  transform:translateX(-50%) translateY(120px);
   background:var(--text);
   color:#fff;
   padding:11px 20px;
   border-radius:99px;
   font-size:13px;
   font-weight:600;
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
-  z-index:1000;
+  transition:transform .3s cubic-bezier(.4,0,.2,1), opacity .3s;
+  z-index:9999;
   box-shadow:var(--shadow-lg);
   max-width:90vw;
+  pointer-events:none;
+  opacity:0;
+  white-space:nowrap;
 }
-.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
 /* ═══ BOTTOM NAV — mobile only ═══ */
 .bottom-nav{
@@ -1240,6 +1243,15 @@ let targetBonuses={};
 let deductions={};
 let sheetsDeductions=[];
 
+// ── Month-aware storage ──
+function monthKey() {
+  const mv = document.getElementById('monthPicker')?.value || '';
+  return mv || 'nomonth';
+}
+function mKey(base) { return base + '_' + monthKey(); }
+
+
+
 
 
 function saveDeduction(agentName){
@@ -1260,7 +1272,7 @@ function saveDeduction(agentName){
   if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
 
   // שמור
-  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+  try { localStorage.setItem(mKey('deductions'), JSON.stringify(deductions)); } catch(e){}
 
   // הצג ✓
   btn.textContent = '✓';
@@ -1283,7 +1295,7 @@ function updateDeduction(agentName, val){
   const gc = document.getElementById("grandTotalCell");
   if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
   // שמור
-  try { localStorage.setItem("deductions", JSON.stringify(deductions)); } catch(e){}
+  try { localStorage.setItem(mKey("deductions"), JSON.stringify(deductions)); } catch(e){}
 }
 
 function updateTarget(agentName, val){
@@ -1553,24 +1565,24 @@ function calcAgent(name,rows,year,month){
 // ── טעינה מ-Google Sheets ──
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyagQyYxJzUML3kBojT6B_eOey-SAWWGUboV6iBO_wZkSmO597N3AcZEkNKaJArFMpH/exec';
 
-async function loadFromSheets(){
+async function loadFromSheets(silent=false){
   const statusEl = document.getElementById('sheetsStatus');
   statusEl.textContent = '⏳ מתחבר ל-Google Sheets...';
   statusEl.style.color = 'var(--accent2)';
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL);
+    const resp = await fetch(APPS_SCRIPT_URL + '?t=' + Date.now(), {cache:'no-store'});
     if (!resp.ok) throw new Error('שגיאת חיבור');
     const text = await resp.text();
     csvData = parseCSV(text);
     statusEl.textContent = `✓ נטענו ${csvData.length} שורות`;
     statusEl.style.color = 'var(--green)';
     setTimeout(()=>{ statusEl.textContent=''; }, 3000);
-    toast(`✅ נטענו ${csvData.length} שורות`);
+    if(!silent) toast(`✅ נטענו ${csvData.length} שורות`);
   } catch(err) {
     statusEl.textContent = '❌ שגיאה בחיבור — נסה שוב';
     statusEl.style.color = 'var(--red)';
-    toast('❌ שגיאה בטעינה מ-Google Sheets');
+    if(!silent) toast('❌ שגיאה בטעינה מ-Google Sheets');
   }
 }
 
@@ -2066,8 +2078,14 @@ function fmt(n){
 }
 function toast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3000);
+  if(!t) return;
+  clearTimeout(t._timer);
+  t.textContent=msg;
+  t.classList.add('show');
+  t._timer=setTimeout(()=>{
+    t.classList.remove('show');
+    t.textContent='';
+  },3000);
 }
 
 const now=new Date();
@@ -2075,41 +2093,20 @@ document.getElementById('monthPicker').value=`${now.getFullYear()}-${String(now.
 
 // טעינה אוטומטית בכניסה לאתר
 async function autoLoadSheets() {
-  const statusEl = document.getElementById('sheetsStatus');
-  if(statusEl) {
-    statusEl.textContent = '⏳ טוען נתונים...';
-    statusEl.style.color = 'var(--accent2)';
-  }
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL);
-    if(!resp.ok) throw new Error('שגיאה');
-    const text = await resp.text();
-    csvData = parseCSV(text);
-    if(statusEl) {
-      statusEl.textContent = `✓ נטענו ${csvData.length} שורות`;
-      statusEl.style.color = 'var(--green)';
-      setTimeout(()=>{ statusEl.textContent=''; }, 3000);
-    }
-    toast(`✅ נטענו ${csvData.length} שורות מ-Google Sheets`);
-    // טעינת הכחשות מ-Sheets
-    try {
-      const dedResp = await fetch(APPS_SCRIPT_URL + '?type=deductions');
-      const dedText = await dedResp.text();
-      const dedData = JSON.parse(dedText);
-      dedData.forEach(d => {
-        if(d.amount > 0) {
-          deductions[d.name] = (deductions[d.name]||0) + d.amount;
-        }
-      });
-      sheetsDeductions = dedData;
-    } catch(e2) { console.log('deductions load error', e2); }
-  } catch(e) {
-    if(statusEl) {
-      statusEl.textContent = '❌ שגיאה בטעינה — לחץ ידנית';
-      statusEl.style.color = 'var(--red)';
-    }
-  }
+  await loadFromSheets(true); // silent - no toast
 }
+
+// טעינה אוטומטית עם retry
+function startAutoLoad() {
+  autoLoadSheets().then(() => {
+    if(!csvData || csvData.length === 0) {
+      setTimeout(autoLoadSheets, 3000);
+    }
+  }).catch(() => {
+    setTimeout(autoLoadSheets, 3000);
+  });
+}
+window.addEventListener('load', startAutoLoad);
 
 // ── 2. Hide status message everywhere - not just sheets section
 function hideStatus() {
@@ -2133,7 +2130,7 @@ function saveTarget(agentName){
   const ag = Object.values(results);
   const gc = document.getElementById('grandTotalCell');
   if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
-  try { localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses)); } catch(e){}
+  try { localStorage.setItem(mKey('bonusTargets'), JSON.stringify(targetBonuses)); } catch(e){}
   if(btn){
     btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
     setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='rgba(245,158,11,.4)';btn.style.color='var(--gold2)';},2000);
@@ -2156,7 +2153,7 @@ function saveDeductionFixed(agentName){
   const ag = Object.values(results);
   const gc = document.getElementById('grandTotalCell');
   if(gc) gc.textContent = fmt(ag.reduce((s,a)=>s+a.total+(targetBonuses[a.name]||0)-(deductions[a.name]||0),0));
-  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+  try { localStorage.setItem(mKey('deductions'), JSON.stringify(deductions)); } catch(e){}
   if(btn){
     btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
     setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(239,68,68,.2)';btn.style.borderColor='rgba(239,68,68,.4)';btn.style.color='var(--red)';},2000);
@@ -2201,7 +2198,7 @@ function saveMobileDed(agentName) {
     const cell = document.getElementById('grand-'+agentName);
     if(cell) cell.textContent = fmt(a.total+(targetBonuses[agentName]||0)-num);
   }
-  try { localStorage.setItem('deductions', JSON.stringify(deductions)); } catch(e){}
+  try { localStorage.setItem(mKey('deductions'), JSON.stringify(deductions)); } catch(e){}
   if(btn){
     btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.color='var(--green)';
     setTimeout(()=>{btn.textContent='💾';btn.style.background='var(--red-soft)';btn.style.color='var(--red)';},2000);
@@ -2224,7 +2221,7 @@ function saveMobileTgt(agentName) {
     const cell = document.getElementById('grand-'+agentName);
     if(cell) cell.textContent = fmt(a.total+num-(deductions[agentName]||0));
   }
-  try { localStorage.setItem('bonusTargets', JSON.stringify(targetBonuses)); } catch(e){}
+  try { localStorage.setItem(mKey('bonusTargets'), JSON.stringify(targetBonuses)); } catch(e){}
   if(btn){
     btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.color='var(--green)';
     setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.color='var(--gold)';},2000);
@@ -2240,7 +2237,7 @@ function saveCloserTarget(who, baseBonus) {
   const ded = closerDeductions[who]||0;
   const el = document.getElementById(who==='shimri'?'shimriGrand':'galGrand');
   if(el) el.textContent = fmt(baseBonus + num - ded);
-  try { localStorage.setItem('closerTargets', JSON.stringify(closerTargets)); } catch(e){}
+  try { localStorage.setItem(mKey('closerTargets'), JSON.stringify(closerTargets)); } catch(e){}
   if(btn){
     btn.textContent='✓'; btn.style.background='rgba(16,185,129,.2)'; btn.style.borderColor='rgba(16,185,129,.4)'; btn.style.color='var(--green)';
     setTimeout(()=>{btn.textContent='💾';btn.style.background='rgba(245,158,11,.2)';btn.style.borderColor='rgba(245,158,11,.4)';btn.style.color='var(--gold2)';},2000);
@@ -2255,7 +2252,7 @@ function saveCloserDeduction(who, baseBonus) {
   const target = closerTargets[who]||0;
   const el = document.getElementById(who==='shimri'?'shimriGrand':'galGrand');
   if(el) el.textContent = fmt(baseBonus + target - num);
-  try { localStorage.setItem('closerDeductions', JSON.stringify(closerDeductions)); } catch(e){}
+  try { localStorage.setItem(mKey('closerDeductions'), JSON.stringify(closerDeductions)); } catch(e){}
   btn.textContent = '✓';
   btn.style.background = 'rgba(16,185,129,.2)';
   btn.style.borderColor = 'rgba(16,185,129,.4)';
@@ -2604,7 +2601,7 @@ function renderGal(rows, year, month) {
 }
 
 function updateCloserTarget(who, val, baseBonus) {
-  try { localStorage.setItem('closerTargets', JSON.stringify(closerTargets)); } catch(e){}
+  try { localStorage.setItem(mKey('closerTargets'), JSON.stringify(closerTargets)); } catch(e){}
   const num = parseFloat(val) || 0;
   closerTargets[who] = num;
   const el = document.getElementById(who === 'shimri' ? 'shimriGrand' : 'galGrand');
@@ -2975,19 +2972,19 @@ function updateSvcHours(key, val, rate, cellId) {
     if (saved) salaryHours = JSON.parse(saved);
   } catch(e) {}
   try {
-    const ded = localStorage.getItem('deductions');
+    const ded = localStorage.getItem(mKey('deductions'));
     if (ded) deductions = JSON.parse(ded);
   } catch(e) {}
   try {
-    const cd = localStorage.getItem('closerDeductions');
+    const cd = localStorage.getItem(mKey('closerDeductions'));
     if (cd) closerDeductions = JSON.parse(cd);
   } catch(e) {}
   try {
-    const bt = localStorage.getItem('bonusTargets');
+    const bt = localStorage.getItem(mKey('bonusTargets'));
     if (bt) targetBonuses = JSON.parse(bt);
   } catch(e) {}
   try {
-    const ct = localStorage.getItem('closerTargets');
+    const ct = localStorage.getItem(mKey('closerTargets'));
     if (ct) closerTargets = JSON.parse(ct);
   } catch(e) {}
   try {
