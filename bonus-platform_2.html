@@ -1524,19 +1524,14 @@ function calcAgent(name,rows,year,month){
     if(r.isSolo){
       bonus=r.dealIncome*.10;
       type='סולו 10%';
-    } else if(
-      // בודק שסגר עם בודק אחר (פורמט "בודק / בודק") → 5%
-      r.closer && r.closerCell.includes('/') &&
-      !norm(r.closer).includes(norm('שימרי')) &&
-      !norm(r.closer).includes(norm('גל')) &&
-      !norm(r.closer).includes(norm('בר'))
-    ){
-      bonus=r.dealIncome*.05;
-      type='בודק סגר 5%';
+    } else if(r.closer && norm(r.closer).includes(norm('דני'))){
+      // דני בעלים — אין בונוס לבודק
+      bonus=0;
+      type='ללא בונוס';
     } else {
+      // כל שאר הסגירות — בונוס טבלה רגיל לפי closureAmt
       bonus=closureBonus(r.closureAmt);
       type='טבלה';
-    }
     closeB+=bonus;
     closeDetails.push({date:r.dateStr,closerCell:r.closerCell,isSolo:r.isSolo,dealIncome:r.dealIncome,closureAmt:r.closureAmt,bonus,type});
   });
