@@ -865,6 +865,8 @@ body.dark .bottom-nav{background:rgba(10,14,26,.92);}
       <option value="טופז">טופז</option>
       <option value="רוני">רוני</option>
       <option value="מתן אל">מתן אל</option>
+      <option value="עופרי">עופרי</option>
+      <option value="דולב">דולב</option>
     </select>
   </div>
   <button class="btn btn-primary" onclick="calculate()">⚡ חשב</button>
@@ -956,6 +958,8 @@ body.dark .bottom-nav{background:rgba(10,14,26,.92);}
 <div class="csec" id="galSec" style="display:none">
 </div>
 <div class="csec" id="barSec" style="display:none">
+</div>
+<div class="csec" id="dolevSec" style="display:none">
 </div>
   <div class="chead">
     <div class="ctitle">💼 גל הראל — נציגת סגירה</div>
@@ -1236,7 +1240,7 @@ body.no-anim *{animation:none!important;transition:none!important;}
 
 
 <script>
-const CHECKERS=['שרית','ניקול','איטל','ניתאי','טופז','רוני','מתן אל'];
+const CHECKERS=['שרית','ניקול','איטל','ניתאי','טופז','רוני','מתן אל','עופרי','דולב'];
 let csvData=[], results={};
 // שמירת בונוסי יעד לכל נציג (נשמר גם בין חישובים)
 let targetBonuses={};
@@ -2287,6 +2291,11 @@ function shimriBonus(dealIncome) {
   return dealIncome * 0.10;
 }
 
+// דולב — אותם אחוזים כמו שימרי
+function dolevBonus(dealIncome) {
+  return shimriBonus(dealIncome);
+}
+
 // ── חישוב בונוס גל הראל ──
 // עד 15,000 → 10% | מעל 15,000 → 15%
 // בונוס אקסטרה: כל יום שהכנסה >= 20,000 → +500 ש"ח
@@ -2329,18 +2338,26 @@ function calculateClosers() {
     (norm(r.closer).includes(norm('בר קמף')) || norm(r.closer).includes(norm('בר')))
   );
 
+  // דולב — כמו שימרי 5%/7%/10%
+  const dolevRows = mRows.filter(r =>
+    r.isFullDeal && r.dealIncome > 0 && !r.isSolo &&
+    norm(r.closer).includes(norm('דולב'))
+  );
+
   renderShimri(shimriRows);
   renderGal(galRows, year, month);
   renderBar(barRows);
+  renderDolev(dolevRows);
 
-  const barTotal = barRows.reduce((s,r) => s + barKamfBonus(r.dealIncome), 0);
+  const barTotal   = barRows.reduce((s,r) => s + barKamfBonus(r.dealIncome), 0);
+  const dolevTotal = dolevRows.reduce((s,r) => s + dolevBonus(r.dealIncome), 0);
 
   // סטטיסטיקות כלליות
-  const allDeals = shimriRows.length + galRows.length + barRows.length;
-  const allIncome = [...shimriRows, ...galRows, ...barRows].reduce((s,r) => s + r.dealIncome, 0);
+  const allDeals  = shimriRows.length + galRows.length + barRows.length + dolevRows.length;
+  const allIncome = [...shimriRows,...galRows,...barRows,...dolevRows].reduce((s,r)=>s+r.dealIncome,0);
   const shimriTotal = shimriRows.reduce((s,r) => s + shimriBonus(r.dealIncome), 0);
-  const galTotalB = calcGalTotal(galRows);
-  const allBonus = shimriTotal + galTotalB + barTotal;
+  const galTotalB   = calcGalTotal(galRows);
+  const allBonus    = shimriTotal + galTotalB + barTotal + dolevTotal;
 
   document.getElementById('closerStatsRow').style.display = 'grid';
   document.getElementById('shimriSec').style.display = 'block';
@@ -2349,6 +2366,43 @@ function calculateClosers() {
   document.getElementById('csTotalIncome').textContent = fmt(allIncome);
   document.getElementById('csTotalBonus').textContent = fmt(allBonus);
   document.getElementById('csTotalGrand').textContent = fmt(allBonus + (closerTargets.shimri||0) + (closerTargets.gal||0));
+}
+
+function renderDolev(rows=[]) {
+  const sec = document.getElementById('dolevSec');
+  if(!sec) return;
+  if(!rows || rows.length===0){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  const totalBonus = rows.reduce((s,r)=>s+dolevBonus(r.dealIncome),0);
+  const target = closerTargets.dolev||0;
+  const ded = closerDeductions.dolev||0;
+  sec.innerHTML = `<div class="closer-card">
+    <div class="ctitle">💼 דולב — נציג סגירה</div>
+    <div class="cstats">
+      <div class="cstat"><div class="csv">${rows.length}</div><div class="csl">סגירות</div></div>
+      <div class="cstat"><div class="csv">${fmt(rows.reduce((s,r)=>s+r.dealIncome,0))}</div><div class="csl">הכנסה</div></div>
+      <div class="cstat"><div class="csv" style="color:var(--green)">${fmt(totalBonus)}</div><div class="csl">בונוס</div></div>
+    </div>
+    <div class="dcard">
+      <div class="dct">🎯 יעד אישי</div>
+      <div class="brow"><span class="bl2">בונוס יעד</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" value="${target||''}" placeholder="0 ₪" min="0" id="tgt-dolev" style="width:75px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);color:var(--gold2);padding:5px 8px;border-radius:8px;font-family:'Heebo',sans-serif;font-size:13px">
+          <button onclick="saveCloserTarget('dolev',${totalBonus})" id="tgt-btn-dolev" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);color:var(--gold2);border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">💾</button>
+        </div>
+      </div>
+      <div class="brow"><span class="bl2" style="color:var(--red)">⬇ הכחשות</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <input type="number" value="${ded||''}" placeholder="0 ₪" min="0" id="ded-dolev" style="width:75px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);color:var(--red);padding:5px 8px;border-radius:8px;font-family:'Heebo',sans-serif;font-size:13px">
+          <button onclick="saveCloserDeduction('dolev',${totalBonus})" id="ded-btn-dolev" style="background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.4);color:var(--red);border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px;font-family:'Heebo',sans-serif;font-weight:700">💾</button>
+        </div>
+      </div>
+      <div class="brow" style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+        <span style="font-weight:800">סה"כ סופי</span>
+        <span style="color:var(--gold2);font-size:18px;font-weight:900" id="dolevGrand">${fmt(totalBonus+target-ded)}</span>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderBar(rows=[]) {
@@ -2764,12 +2818,15 @@ const SALES_AGENTS_SAL = [
   { name: 'רוני',           rate: 40, netRatio: 0.85  },
   { name: 'מתן אל כהן',    rate: 35, netRatio: 0.904 },
   { name: 'טופז',           rate: 40, netRatio: 0.85  },
+  { name: 'עופרי',          rate: 40, netRatio: 0.85  },
+  { name: 'דולב',           rate: 40, netRatio: 0.85  },
 ];
 
 const CLOSERS_SAL = [
   { name: 'שימרי אבו גזל', rate: 45, netRatio: 0.683 },
   { name: 'גל הראל',       rate: 0,  fixedNet: 8000, fixedGross: 8000 },
   { name: 'בר קמף',        rate: 40, netRatio: 0.85 },
+  { name: 'דולב',          rate: 40, netRatio: 0.85 },
 ];
 
 const OTHERS_SAL = [
