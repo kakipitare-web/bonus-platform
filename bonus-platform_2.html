@@ -837,7 +837,7 @@ body.dark .bottom-nav{background:rgba(10,14,26,.92);}
     <div class="upload-icon">🔗</div>
     <div class="upload-title" style="color:var(--green)">חיבור Google Sheets</div>
     <div class="upload-sub" style="margin-bottom:10px">נתונים עדכניים אוטומטית</div>
-    <button class="btn btn-success" style="width:100%;height:38px;font-size:12px" onclick="(async()=>await loadFromSheets())()">📥 טען מחדש</button>
+    <button class="btn btn-success" style="width:100%;height:38px;font-size:12px" onclick="loadFromSheets()">📥 טען מחדש</button>
     <div class="upload-name" id="sheetsStatus"></div>
   </div>
   <div class="upload" id="upSec" onclick="document.getElementById('csvInput').click()">
@@ -1532,6 +1532,7 @@ function calcAgent(name,rows,year,month){
       // כל שאר הסגירות — בונוס טבלה רגיל לפי closureAmt
       bonus=closureBonus(r.closureAmt);
       type='טבלה';
+    }
     closeB+=bonus;
     closeDetails.push({date:r.dateStr,closerCell:r.closerCell,isSolo:r.isSolo,dealIncome:r.dealIncome,closureAmt:r.closureAmt,bonus,type});
   });
@@ -1565,7 +1566,6 @@ function calcAgent(name,rows,year,month){
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyagQyYxJzUML3kBojT6B_eOey-SAWWGUboV6iBO_wZkSmO597N3AcZEkNKaJArFMpH/exec';
 
 async function loadFromSheets(silent=false){
-  window._loadFromSheets = window._loadFromSheets || loadFromSheets;
   const statusEl = document.getElementById('sheetsStatus');
   statusEl.textContent = '⏳ מתחבר ל-Google Sheets...';
   statusEl.style.color = 'var(--accent2)';
@@ -3333,10 +3333,6 @@ function generatePDF() {
     document.querySelectorAll('.bn-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.tab === tab);
     });
-  };
-  // Expose loadFromSheets globally for onclick
-  window.loadFromSheets = function() {
-    if(typeof loadFromSheets === 'function') return loadFromSheets();
   };
 })();
 </script>
