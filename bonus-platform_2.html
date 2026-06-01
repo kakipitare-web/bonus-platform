@@ -3020,10 +3020,20 @@ function updateSvcHours(key, val, rate, cellId) {
 }
 
 (function loadAllData() {
+  // 1. טען שעות (לא תלוי חודש)
   try {
     const saved = localStorage.getItem('salaryHours');
     if (saved) salaryHours = JSON.parse(saved);
   } catch(e) {}
+  // 2. טען חודש קודם לכל שאר הנתונים
+  try {
+    const month = localStorage.getItem('bonusMonth');
+    if (month) {
+      const picker = document.getElementById('monthPicker');
+      if (picker) picker.value = month;
+    }
+  } catch(e) {}
+  // 3. עכשיו טען נתונים לפי חודש
   try {
     const ded = localStorage.getItem(mKey('deductions'));
     if (ded) deductions = JSON.parse(ded);
@@ -3039,13 +3049,6 @@ function updateSvcHours(key, val, rate, cellId) {
   try {
     const ct = localStorage.getItem(mKey('closerTargets'));
     if (ct) closerTargets = JSON.parse(ct);
-  } catch(e) {}
-  try {
-    const month = localStorage.getItem('bonusMonth');
-    if (month) {
-      const picker = document.getElementById('monthPicker');
-      if (picker) picker.value = month;
-    }
   } catch(e) {}
 })();
 
