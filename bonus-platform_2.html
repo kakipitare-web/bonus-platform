@@ -2888,14 +2888,29 @@ function renderSalary() {
         <td style="padding:10px 13px;font-weight:700;color:var(--green)">₪${net.toLocaleString('he-IL')} נטו</td>
       </tr>`;
     } else {
-      // שימרי — שכר שעתי + בונוס סופי מטאב הסוגרים
+      // סוגר שעתי — שכר + בונוס
       const h = salaryHours['cls_'+a.name] || 0;
       gross = Math.round(a.rate * h);
-      // קרא בונוס סופי ישירות מ-shimriGrand
       const finalBonus = (() => {
-        const el = document.getElementById('shimriGrand');
-        if (el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
-        return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
+        const nm = norm(a.name);
+        if(nm.includes(norm('שימרי'))) {
+          const el = document.getElementById('shimriGrand');
+          if(el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+          return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
+        }
+        if(nm.includes(norm('בר'))) {
+          const el = document.getElementById('barGrand');
+          if(el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+          return (closerTargets.bar||0) - (closerDeductions.bar||0);
+        }
+        if(nm.includes(norm('דולב'))) {
+          // דולב: בונוס סגירות + בונוס בדיקות
+          const elClose = document.getElementById('dolevGrand');
+          const closeBonus = elClose ? parseInt(elClose.textContent.replace(/[^\d]/g,''))||0 : 0;
+          const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
+          return closeBonus + checkBonus;
+        }
+        return 0;
       })();
       totalGross += gross + finalBonus;
       closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
@@ -3191,7 +3206,9 @@ function generatePDF() {
   })() : 'לא נבחר חודש';
 
   // איסוף נתוני בודקים
-  const checkerRows = Object.values(results).map(a => {
+  const checkerRows = Object.values(results)
+    .filter(a => norm(a.name) !== norm('דולב')) // דולב מופיעה בסוגרים
+    .map(a => {
     const salAgent = SALES_AGENTS_SAL.find(s => s.name === a.name || s.name.includes(a.name.split(' ')[0]) || a.name.includes(s.name.split(' ')[0]));
     const hours = salaryHours['sal_'+a.name] || (salAgent ? salaryHours['sal_'+salAgent.name] : 0) || 0;
     const rate  = salAgent ? salAgent.rate : 0;
@@ -3199,7 +3216,7 @@ function generatePDF() {
     const ded    = deductions[a.name] || 0;
     const target = targetBonuses[a.name] || 0;
     const bonus  = Math.round(a.total + target - ded);
-    return { name: a.name, hours, gross, bonus, ded: 0 }; // ded already included in bonus
+    return { name: a.name, hours, gross, bonus, ded: 0 };
   });
 
   // שימרי
@@ -3282,6 +3299,25 @@ function generatePDF() {
       <td>₪8,000</td>
       <td>—</td>
       <td><strong>₪8,000</strong></td>
+    </tr>
+    <tr>
+      <td>דולב</td>
+      <td>${salaryHours['cls_דולב']||salaryHours['sal_דולב']||'—'}</td>
+      <td>₪${(40*(salaryHours['cls_דולב']||salaryHours['sal_דולב']||0)).toLocaleString('he-IL')}</td>
+      <td>₪${(()=>{
+        const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
+        const el = document.getElementById('dolevGrand');
+        const closeBonus = el ? parseInt(el.textContent.replace(/[^\d]/g,''))||0 : 0;
+        return (checkBonus + closeBonus).toLocaleString('he-IL');
+      })()}</td>
+      <td><strong>₪${(()=>{
+        const h = salaryHours['cls_דולב']||salaryHours['sal_דולב']||0;
+        const gross = 40 * h;
+        const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
+        const el = document.getElementById('dolevGrand');
+        const closeBonus = el ? parseInt(el.textContent.replace(/[^\d]/g,''))||0 : 0;
+        return (gross + checkBonus + closeBonus).toLocaleString('he-IL');
+      })()}</strong></td>
     </tr>
     <tr style="background:#fff9e6">
       <td>צבי אבו גזל <span style="font-size:10px;color:#888">(פיצול שימרי)</span></td>
