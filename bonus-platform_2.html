@@ -2291,8 +2291,8 @@ function switchTab(tab, btn) {
 // 10,001+ → 10%
 function shimriBonus(dealIncome) {
   if (dealIncome <= 0) return 0;
-  if (dealIncome <= 6000)  return dealIncome * 0.05;
-  if (dealIncome <= 10000) return dealIncome * 0.07;
+  if (dealIncome < 6000)    return dealIncome * 0.05;
+  if (dealIncome <= 10000)  return dealIncome * 0.07;
   return dealIncome * 0.10;
 }
 
@@ -2552,8 +2552,8 @@ function renderShimri(rows) {
     </div>
     <div class="dcard">
       <div class="dct">📐 מודל עמלה</div>
-      <div class="brow"><span class="bl2">עד ₪6,000</span><span class="bv">5%</span></div>
-      <div class="brow"><span class="bl2">₪6,001–₪10,000</span><span class="bv">7%</span></div>
+      <div class="brow"><span class="bl2">עד ₪5,999</span><span class="bv">5%</span></div>
+      <div class="brow"><span class="bl2">₪6,000–₪10,000</span><span class="bv">7%</span></div>
       <div class="brow"><span class="bl2">₪10,001+</span><span class="bv">10%</span></div>
     </div>
   </div>`;
@@ -2565,7 +2565,7 @@ function renderShimri(rows) {
         <thead><tr><th>תאריך</th><th>בודק</th><th>סכום עסקה</th><th>מדרגה</th><th>בונוס</th></tr></thead><tbody>`;
     rows.forEach(r => {
       const b = shimriBonus(r.dealIncome);
-      const tier = r.dealIncome > 10000 ? '10%' : r.dealIncome > 6000 ? '7%' : '5%';
+      const tier = r.dealIncome > 10000 ? '10%' : r.dealIncome >= 6000 ? '7%' : '5%';
       h += `<tr>
         <td>${r.dateStr}</td>
         <td>${r.checker}</td>
