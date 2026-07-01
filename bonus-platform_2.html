@@ -2888,10 +2888,11 @@ const SALES_AGENTS_SAL = [
 ];
 
 const CLOSERS_SAL = [
-  { name: 'שימרי אבו גזל', rate: 45, netRatio: 0.683 },
+  { name: 'שימרי אבו גזל', rate: 45, netRatio: 0.683, bonusEl: 'shimriGrand' },
   { name: 'גל הראל',       rate: 0,  fixedNet: 8000, fixedGross: 8000 },
-  { name: 'בר קמף',        rate: 40, netRatio: 0.85 },
-  { name: 'דולב',          rate: 40, netRatio: 0.85 },
+  { name: 'דולב',          rate: 40, netRatio: 0.85, bonusEl: 'dolevGrand' },
+  // בר קמף סיים לעבוד — לא מופיע בשכר. להחזרה: הסר את inactiveSalary
+  { name: 'בר קמף',        rate: 40, netRatio: 0.85, bonusEl: 'barGrand', inactiveSalary: true },
 ];
 
 const OTHERS_SAL = [
@@ -2945,6 +2946,7 @@ function renderSalary() {
   // סוגרים
   let closersHtml = '';
   CLOSERS_SAL.forEach((a, i) => {
+    if (a.inactiveSalary) return; // עובד שסיים — לא מציגים בשכר
     let gross, net;
     if (a.fixedNet) {
       // גל הראל — שכר קבוע בלבד, בלי בונוס (כנגד חשבונית)
@@ -2957,14 +2959,13 @@ function renderSalary() {
         <td style="padding:10px 13px;font-weight:700;color:var(--green)">₪${net.toLocaleString('he-IL')} נטו</td>
       </tr>`;
     } else {
-      // שימרי — שכר שעתי + בונוס סופי מטאב הסוגרים
+      // נציג סגירה שעתי + בונוס סופי — כל אחד מהאלמנט שלו (shimriGrand / dolevGrand / barGrand)
       const h = salaryHours['cls_'+a.name] || 0;
       gross = Math.round(a.rate * h);
-      // קרא בונוס סופי ישירות מ-shimriGrand
       const finalBonus = (() => {
-        const el = document.getElementById('shimriGrand');
+        const el = a.bonusEl ? document.getElementById(a.bonusEl) : null;
         if (el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
-        return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
+        return 0;
       })();
       totalGross += gross + finalBonus;
       closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
@@ -3056,6 +3057,7 @@ function updateSalHours(key, val, type, idx, rate, netRatio) {
     totalNet   += Math.round(a.rate * h2 * a.netRatio);
   });
   CLOSERS_SAL.forEach(a => {
+    if (a.inactiveSalary) return;
     if (a.fixedNet) { totalGross += a.fixedGross; totalNet += a.fixedNet; }
     else {
       const h2 = salaryHours['cls_'+a.name] || 0;
@@ -3080,7 +3082,7 @@ function updateSvcHours(key, val, rate, cellId) {
   // עדכן סה"כ
   let tg = 0;
   SALES_AGENTS_SAL.forEach(a => { tg += (a.rate*(salaryHours['sal_'+a.name]||0)); });
-  CLOSERS_SAL.forEach(a => { tg += a.fixedNet ? a.fixedGross : (a.rate*(salaryHours['cls_'+a.name]||0)); });
+  CLOSERS_SAL.forEach(a => { if (a.inactiveSalary) return; tg += a.fixedNet ? a.fixedGross : (a.rate*(salaryHours['cls_'+a.name]||0)); });
   OTHERS_SAL.forEach(a => { tg += a.gross; });
   SERVICE_HOURLY.forEach(a => { tg += a.rate*(salaryHours['svc_'+a.name]||0); });
   SERVICE_FIXED.forEach(a => { tg += a.gross; });
