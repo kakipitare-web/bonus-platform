@@ -2332,7 +2332,15 @@ function galBonus(dealIncome) {
   if (dealIncome <= 0) return 0;
   return dealIncome * galRate(dealIncome);
 }
-// האם ליום יש עסקה שזיכתה ב-20% (15,000+) → מבטל את בונוס ה-500 היומי (אין כפל)
+// בונוס יעד יומי מדורג לפי סך ההכנסה היומית (לא מצטבר — מדרגה הגבוהה בלבד)
+//   20,000+ → 500 | 30,000+ → 1,000 | 40,000+ → 1,500
+function galDailyBonus(dayIncome) {
+  if (dayIncome >= 40000) return 1500;
+  if (dayIncome >= 30000) return 1000;
+  if (dayIncome >= 20000) return 500;
+  return 0;
+}
+// האם ליום יש עסקה שזיכתה ב-20% (15,000+) → מבטל את בונוס היעד היומי (אין כפל)
 function galDayHas20(rows) {
   return rows.some(r => r.dealIncome >= 15000);
 }
@@ -2491,10 +2499,11 @@ function calcGalTotal(rows) {
     if (!byDay[r.dateStr]) byDay[r.dateStr] = [];
     byDay[r.dateStr].push(r);
   });
-  // בונוס יומי 500 ש"ח לכל יום שהכנסה >= 20,000 — אך לא ביום שבו יש עסקת 20% (אין כפל)
+  // בונוס יעד יומי מדורג — למעט ימים עם עסקת 20% (אין כפל)
   Object.values(byDay).forEach(dayRows => {
+    if (galDayHas20(dayRows)) return;
     const dayIncome = dayRows.reduce((s,r)=>s+r.dealIncome,0);
-    if (dayIncome >= 20000 && !galDayHas20(dayRows)) bonus += 500;
+    bonus += galDailyBonus(dayIncome);
   });
   return bonus;
 }
@@ -2590,18 +2599,17 @@ function renderGal(rows, year, month) {
 
   let dailyExtraTotal = 0;
   const extraDays = [];
-  const skipDays = [];   // ימים שביטלו את ה-500 בגלל עסקת 20% (אין כפל)
-  const manualDays = []; // ימי 40,000+ → דיווח ידני לאישור
+  const skipDays = [];   // ימים שבוטל בהם היעד היומי בגלל עסקת 20% (אין כפל)
   Object.entries(byDay).forEach(([date, day]) => {
     if (day.income >= 20000) {
       if (day.has20) {
         skipDays.push({ date, income: day.income });
       } else {
-        dailyExtraTotal += 500;
-        extraDays.push({ date, income: day.income });
+        const db = galDailyBonus(day.income);
+        dailyExtraTotal += db;
+        extraDays.push({ date, income: day.income, bonus: db });
       }
     }
-    if (day.income >= 40000) manualDays.push({ date, income: day.income });
   });
 
   const totalBonus = baseBonus + dailyExtraTotal;
@@ -2612,7 +2620,7 @@ function renderGal(rows, year, month) {
       <div class="brow"><span class="bl2">מספר עסקאות</span><span class="bv" style="color:var(--accent2)">${totalDeals}</span></div>
       <div class="brow"><span class="bl2">הכנסה כוללת</span><span class="bv">${fmt(totalIncome)}</span></div>
       <div class="brow"><span class="bl2">בונוס עסקאות</span><span class="bv" style="color:var(--green)">${fmt(baseBonus)}</span></div>
-      <div class="brow"><span class="bl2">בונוס ימי 20K (${extraDays.length} ימים)</span><span class="bv" style="color:var(--gold2)">${fmt(dailyExtraTotal)}</span></div>
+      <div class="brow"><span class="bl2">בונוס יעד יומי (${extraDays.length} ימים)</span><span class="bv" style="color:var(--gold2)">${fmt(dailyExtraTotal)}</span></div>
       <div class="brow" style="border-top:1px solid var(--border);margin-top:4px;padding-top:6px">
         <span style="font-weight:800;color:var(--text)">סה"כ בונוס</span>
         <span class="bv" style="color:var(--green);font-size:15px">${fmt(totalBonus)}</span>
@@ -2655,44 +2663,34 @@ function renderGal(rows, year, month) {
       <div class="brow"><span class="bl2">₪9,000–9,999</span><span class="bv">9%</span></div>
       <div class="brow"><span class="bl2">₪10,000–14,999</span><span class="bv">10%</span></div>
       <div class="brow"><span class="bl2">₪15,000+</span><span class="bv" style="color:var(--gold2)">20%</span></div>
-      <div class="brow"><span class="bl2">יום ≥ ₪20,000 (ללא עסקת 20%)</span><span class="bv" style="color:var(--gold2)">+₪500</span></div>
+      <div class="brow"><span class="bl2">יעד יומי — ₪20,000+</span><span class="bv" style="color:var(--gold2)">+₪500</span></div>
+      <div class="brow"><span class="bl2">יעד יומי — ₪30,000+</span><span class="bv" style="color:var(--gold2)">+₪1,000</span></div>
+      <div class="brow"><span class="bl2">יעד יומי — ₪40,000+</span><span class="bv" style="color:var(--gold2)">+₪1,500</span></div>
+      <div class="brow"><span class="bl2" style="font-size:11px;color:var(--text-3)">* אין כפל: יום עם עסקת 20% — ללא יעד יומי</span><span class="bv"></span></div>
     </div>
   </div>`;
 
-  // ימי בונוס
+  // ימי בונוס יעד יומי
   if (extraDays.length) {
     h += `<div class="dcard" style="margin-bottom:13px">
-      <div class="dct">⭐ ימי הכנסה מעל 20,000 ש"ח</div>`;
+      <div class="dct">⭐ ימי בונוס יעד יומי</div>`;
     extraDays.forEach(d => {
       h += `<div class="brow">
         <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
-        <span class="bv" style="color:var(--gold2)">+₪500</span>
+        <span class="bv" style="color:var(--gold2)">+${fmt(d.bonus)}</span>
       </div>`;
     });
     h += `</div>`;
   }
 
-  // ימים שבהם בוטל ה-500 בגלל עסקת 20% (אין כפל)
+  // ימים שבהם בוטל היעד היומי בגלל עסקת 20% (אין כפל)
   if (skipDays.length) {
     h += `<div class="dcard" style="margin-bottom:13px;border-color:rgba(239,68,68,.3)">
-      <div class="dct">🚫 ללא בונוס 500 (יש עסקת 20% — אין כפל)</div>`;
+      <div class="dct">🚫 ללא יעד יומי (יש עסקת 20% — אין כפל)</div>`;
     skipDays.forEach(d => {
       h += `<div class="brow">
         <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
-        <span class="bv" style="color:var(--red)">בוטל +₪500</span>
-      </div>`;
-    });
-    h += `</div>`;
-  }
-
-  // ימי 40,000+ → דיווח ידני לאישור
-  if (manualDays.length) {
-    h += `<div class="dcard" style="margin-bottom:13px;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.05)">
-      <div class="dct">✍️ ימי ₪40,000+ — דיווח ידני לאישור</div>`;
-    manualDays.forEach(d => {
-      h += `<div class="brow">
-        <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
-        <span class="bv" style="color:var(--gold2)">גל רושמת ומעבירה לאישור</span>
+        <span class="bv" style="color:var(--red)">בוטל יעד יומי</span>
       </div>`;
     });
     h += `</div>`;
@@ -3091,6 +3089,15 @@ function updateSvcHours(key, val, rate, cellId) {
 }
 
 (function loadAllData() {
+  // חשוב: קודם משחזרים את החודש השמור, כדי ש-mKey יצביע על החודש הנכון
+  // לפני טעינת כל הנתונים המפתחיים-לפי-חודש (יעדים, הכחשות וכו')
+  try {
+    const month = localStorage.getItem('bonusMonth');
+    if (month) {
+      const picker = document.getElementById('monthPicker');
+      if (picker) picker.value = month;
+    }
+  } catch(e) {}
   try {
     const saved = localStorage.getItem('salaryHours');
     if (saved) salaryHours = JSON.parse(saved);
@@ -3111,13 +3118,25 @@ function updateSvcHours(key, val, rate, cellId) {
     const ct = localStorage.getItem(mKey('closerTargets'));
     if (ct) closerTargets = JSON.parse(ct);
   } catch(e) {}
-  try {
-    const month = localStorage.getItem('bonusMonth');
-    if (month) {
-      const picker = document.getElementById('monthPicker');
-      if (picker) picker.value = month;
+})();
+
+// טעינה מחדש של נתונים מפתחיים-לפי-חודש בעת החלפת חודש ידנית
+(function attachMonthReload() {
+  const picker = document.getElementById('monthPicker');
+  if (!picker) return;
+  picker.addEventListener('change', function() {
+    try { localStorage.setItem('bonusMonth', picker.value); } catch(e){}
+    // אפס לזיכרון נקי לפני טעינה, כדי לא לשמור ערכים מחודש קודם
+    deductions = {}; closerDeductions = {}; targetBonuses = {}; closerTargets = { shimri: 0, gal: 0 };
+    try { const v = localStorage.getItem(mKey('deductions'));       if (v) deductions = JSON.parse(v); } catch(e){}
+    try { const v = localStorage.getItem(mKey('closerDeductions')); if (v) closerDeductions = JSON.parse(v); } catch(e){}
+    try { const v = localStorage.getItem(mKey('bonusTargets'));     if (v) targetBonuses = JSON.parse(v); } catch(e){}
+    try { const v = localStorage.getItem(mKey('closerTargets'));    if (v) closerTargets = JSON.parse(v); } catch(e){}
+    // אם כבר נטען CSV — רענן את התצוגה כדי שהיעדים יופיעו מיד
+    if (typeof csvData !== 'undefined' && csvData.length) {
+      try { calculate(); } catch(e){}
     }
-  } catch(e) {}
+  });
 })();
 
 
