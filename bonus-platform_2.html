@@ -963,7 +963,7 @@ body.dark .bottom-nav{background:rgba(10,14,26,.92);}
 </div>
   <div class="chead">
     <div class="ctitle">💼 גל הראל — נציגת סגירה</div>
-    <div class="model-badge">10% / 15% + יומי 500</div>
+    <div class="model-badge">מדורג 5%–20% + יומי 500</div>
   </div>
   <div class="closer-detail" id="galDetail">
     <div class="empty"><div class="empty-icon">📊</div><div class="empty-t">לחץ "חשב סוגרים"</div></div>
@@ -2308,10 +2308,33 @@ function barKamfBonus(dealIncome) {
   return Math.round(dealIncome * 0.10);
 }
 
+// מודל גל הראל (מעודכן) — כל החישוב על הסכום לפני מע"מ
+//   עד 3,999    → 5%
+//   4,000–5,999 → 7%
+//   6,000–8,999 → 8%
+//   9,000–9,999 → 9%
+//   10,000–14,999 → 10%
+//   15,000+     → 20%
+function galRate(dealIncome) {
+  if (dealIncome <= 0)     return 0;
+  if (dealIncome < 4000)   return 0.05;
+  if (dealIncome < 6000)   return 0.07;
+  if (dealIncome < 9000)   return 0.08;
+  if (dealIncome < 10000)  return 0.09;
+  if (dealIncome < 15000)  return 0.10;
+  return 0.20;
+}
+function galRateLabel(dealIncome) {
+  const r = galRate(dealIncome);
+  return Math.round(r * 100) + '%';
+}
 function galBonus(dealIncome) {
   if (dealIncome <= 0) return 0;
-  if (dealIncome <= 15000) return dealIncome * 0.10;
-  return dealIncome * 0.15;
+  return dealIncome * galRate(dealIncome);
+}
+// האם ליום יש עסקה שזיכתה ב-20% (15,000+) → מבטל את בונוס ה-500 היומי (אין כפל)
+function galDayHas20(rows) {
+  return rows.some(r => r.dealIncome >= 15000);
 }
 
 function calculateClosers() {
@@ -2465,12 +2488,13 @@ function calcGalTotal(rows) {
   const byDay = {};
   rows.forEach(r => {
     bonus += galBonus(r.dealIncome);
-    if (!byDay[r.dateStr]) byDay[r.dateStr] = 0;
-    byDay[r.dateStr] += r.dealIncome;
+    if (!byDay[r.dateStr]) byDay[r.dateStr] = [];
+    byDay[r.dateStr].push(r);
   });
-  // בונוס יומי 500 ש"ח לכל יום שהכנסה >= 20,000
-  Object.values(byDay).forEach(dayIncome => {
-    if (dayIncome >= 20000) bonus += 500;
+  // בונוס יומי 500 ש"ח לכל יום שהכנסה >= 20,000 — אך לא ביום שבו יש עסקת 20% (אין כפל)
+  Object.values(byDay).forEach(dayRows => {
+    const dayIncome = dayRows.reduce((s,r)=>s+r.dealIncome,0);
+    if (dayIncome >= 20000 && !galDayHas20(dayRows)) bonus += 500;
   });
   return bonus;
 }
@@ -2557,19 +2581,27 @@ function renderGal(rows, year, month) {
   const byDay = {};
   rows.forEach(r => {
     baseBonus += galBonus(r.dealIncome);
-    if (!byDay[r.dateStr]) byDay[r.dateStr] = { income: 0, deals: 0, bonus: 0 };
+    if (!byDay[r.dateStr]) byDay[r.dateStr] = { income: 0, deals: 0, bonus: 0, has20: false };
     byDay[r.dateStr].income += r.dealIncome;
     byDay[r.dateStr].deals++;
     byDay[r.dateStr].bonus += galBonus(r.dealIncome);
+    if (r.dealIncome >= 15000) byDay[r.dateStr].has20 = true;
   });
 
   let dailyExtraTotal = 0;
   const extraDays = [];
+  const skipDays = [];   // ימים שביטלו את ה-500 בגלל עסקת 20% (אין כפל)
+  const manualDays = []; // ימי 40,000+ → דיווח ידני לאישור
   Object.entries(byDay).forEach(([date, day]) => {
     if (day.income >= 20000) {
-      dailyExtraTotal += 500;
-      extraDays.push({ date, income: day.income });
+      if (day.has20) {
+        skipDays.push({ date, income: day.income });
+      } else {
+        dailyExtraTotal += 500;
+        extraDays.push({ date, income: day.income });
+      }
     }
+    if (day.income >= 40000) manualDays.push({ date, income: day.income });
   });
 
   const totalBonus = baseBonus + dailyExtraTotal;
@@ -2616,10 +2648,14 @@ function renderGal(rows, year, month) {
       </div>
     </div>
     <div class="dcard">
-      <div class="dct">📐 מודל עמלה</div>
-      <div class="brow"><span class="bl2">עד ₪15,000</span><span class="bv">10%</span></div>
-      <div class="brow"><span class="bl2">₪15,001+</span><span class="bv">15%</span></div>
-      <div class="brow"><span class="bl2">יום עם הכנסה ≥ ₪20,000</span><span class="bv" style="color:var(--gold2)">+₪500</span></div>
+      <div class="dct">📐 מודל עמלה (לפני מע"מ)</div>
+      <div class="brow"><span class="bl2">עד ₪3,999</span><span class="bv">5%</span></div>
+      <div class="brow"><span class="bl2">₪4,000–5,999</span><span class="bv">7%</span></div>
+      <div class="brow"><span class="bl2">₪6,000–8,999</span><span class="bv">8%</span></div>
+      <div class="brow"><span class="bl2">₪9,000–9,999</span><span class="bv">9%</span></div>
+      <div class="brow"><span class="bl2">₪10,000–14,999</span><span class="bv">10%</span></div>
+      <div class="brow"><span class="bl2">₪15,000+</span><span class="bv" style="color:var(--gold2)">20%</span></div>
+      <div class="brow"><span class="bl2">יום ≥ ₪20,000 (ללא עסקת 20%)</span><span class="bv" style="color:var(--gold2)">+₪500</span></div>
     </div>
   </div>`;
 
@@ -2636,6 +2672,32 @@ function renderGal(rows, year, month) {
     h += `</div>`;
   }
 
+  // ימים שבהם בוטל ה-500 בגלל עסקת 20% (אין כפל)
+  if (skipDays.length) {
+    h += `<div class="dcard" style="margin-bottom:13px;border-color:rgba(239,68,68,.3)">
+      <div class="dct">🚫 ללא בונוס 500 (יש עסקת 20% — אין כפל)</div>`;
+    skipDays.forEach(d => {
+      h += `<div class="brow">
+        <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
+        <span class="bv" style="color:var(--red)">בוטל +₪500</span>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  // ימי 40,000+ → דיווח ידני לאישור
+  if (manualDays.length) {
+    h += `<div class="dcard" style="margin-bottom:13px;border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.05)">
+      <div class="dct">✍️ ימי ₪40,000+ — דיווח ידני לאישור</div>`;
+    manualDays.forEach(d => {
+      h += `<div class="brow">
+        <span class="bl2">${d.date} — הכנסה ${fmt(d.income)}</span>
+        <span class="bv" style="color:var(--gold2)">גל רושמת ומעבירה לאישור</span>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
   // פירוט עסקאות
   if (rows.length) {
     h += `<div class="dcard">
@@ -2644,7 +2706,7 @@ function renderGal(rows, year, month) {
         <thead><tr><th>תאריך</th><th>בודק</th><th>סכום עסקה</th><th>מדרגה</th><th>בונוס</th></tr></thead><tbody>`;
     rows.forEach(r => {
       const b = galBonus(r.dealIncome);
-      const tier = r.dealIncome > 15000 ? '15%' : '10%';
+      const tier = galRateLabel(r.dealIncome);
       h += `<tr>
         <td>${r.dateStr}</td>
         <td>${r.checker}</td>
