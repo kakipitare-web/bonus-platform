@@ -1451,6 +1451,7 @@ function extractCloser(cell){
 
 function parseCSV(text){
   const rows=[];
+  let lastChecker=''; // בודק אחרון — לשימוש בשורות פיצול
   text.split('\n').forEach(line=>{
     line=line.trim();if(!line)return;
     const cols=parseCSVLine(line);
@@ -1459,6 +1460,14 @@ function parseCSV(text){
     if(!dateStr||!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/))return;
     const year=+dateStr.split('/')[2];
     const row=parseRow(cols,year);
+    // שורת פיצול: אם אין בודק אבל יש "פוצל" בתוכן — שייך לבודק האחרון
+    if(!row.checker && lastChecker &&
+       (cols.join(',').includes('פוצל') || cols.join(',').includes('שפוצלה'))) {
+      row.checker = lastChecker;
+      row.closerCell = lastChecker;
+      row.checkIncome = row.checkIncome || 500; // ברירת מחדל
+    }
+    if(row.checker) lastChecker = row.checker;
     rows.push(row);
   });
   return rows;
@@ -2888,29 +2897,14 @@ function renderSalary() {
         <td style="padding:10px 13px;font-weight:700;color:var(--green)">₪${net.toLocaleString('he-IL')} נטו</td>
       </tr>`;
     } else {
-      // סוגר שעתי — שכר + בונוס
+      // שימרי — שכר שעתי + בונוס סופי מטאב הסוגרים
       const h = salaryHours['cls_'+a.name] || 0;
       gross = Math.round(a.rate * h);
+      // קרא בונוס סופי ישירות מ-shimriGrand
       const finalBonus = (() => {
-        const nm = norm(a.name);
-        if(nm.includes(norm('שימרי'))) {
-          const el = document.getElementById('shimriGrand');
-          if(el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
-          return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
-        }
-        if(nm.includes(norm('בר'))) {
-          const el = document.getElementById('barGrand');
-          if(el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
-          return (closerTargets.bar||0) - (closerDeductions.bar||0);
-        }
-        if(nm.includes(norm('דולב'))) {
-          // דולב: בונוס סגירות + בונוס בדיקות
-          const elClose = document.getElementById('dolevGrand');
-          const closeBonus = elClose ? parseInt(elClose.textContent.replace(/[^\d]/g,''))||0 : 0;
-          const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
-          return closeBonus + checkBonus;
-        }
-        return 0;
+        const el = document.getElementById('shimriGrand');
+        if (el) return parseInt(el.textContent.replace(/[^\d]/g,''))||0;
+        return (closerTargets.shimri||0) - (closerDeductions.shimri||0);
       })();
       totalGross += gross + finalBonus;
       closersHtml += `<tr style="border-bottom:1px solid rgba(30,45,69,.5)">
@@ -3035,20 +3029,10 @@ function updateSvcHours(key, val, rate, cellId) {
 }
 
 (function loadAllData() {
-  // 1. טען שעות (לא תלוי חודש)
   try {
     const saved = localStorage.getItem('salaryHours');
     if (saved) salaryHours = JSON.parse(saved);
   } catch(e) {}
-  // 2. טען חודש קודם לכל שאר הנתונים
-  try {
-    const month = localStorage.getItem('bonusMonth');
-    if (month) {
-      const picker = document.getElementById('monthPicker');
-      if (picker) picker.value = month;
-    }
-  } catch(e) {}
-  // 3. עכשיו טען נתונים לפי חודש
   try {
     const ded = localStorage.getItem(mKey('deductions'));
     if (ded) deductions = JSON.parse(ded);
@@ -3064,6 +3048,13 @@ function updateSvcHours(key, val, rate, cellId) {
   try {
     const ct = localStorage.getItem(mKey('closerTargets'));
     if (ct) closerTargets = JSON.parse(ct);
+  } catch(e) {}
+  try {
+    const month = localStorage.getItem('bonusMonth');
+    if (month) {
+      const picker = document.getElementById('monthPicker');
+      if (picker) picker.value = month;
+    }
   } catch(e) {}
 })();
 
@@ -3206,9 +3197,7 @@ function generatePDF() {
   })() : 'לא נבחר חודש';
 
   // איסוף נתוני בודקים
-  const checkerRows = Object.values(results)
-    .filter(a => norm(a.name) !== norm('דולב')) // דולב מופיעה בסוגרים
-    .map(a => {
+  const checkerRows = Object.values(results).map(a => {
     const salAgent = SALES_AGENTS_SAL.find(s => s.name === a.name || s.name.includes(a.name.split(' ')[0]) || a.name.includes(s.name.split(' ')[0]));
     const hours = salaryHours['sal_'+a.name] || (salAgent ? salaryHours['sal_'+salAgent.name] : 0) || 0;
     const rate  = salAgent ? salAgent.rate : 0;
@@ -3216,7 +3205,7 @@ function generatePDF() {
     const ded    = deductions[a.name] || 0;
     const target = targetBonuses[a.name] || 0;
     const bonus  = Math.round(a.total + target - ded);
-    return { name: a.name, hours, gross, bonus, ded: 0 };
+    return { name: a.name, hours, gross, bonus, ded: 0 }; // ded already included in bonus
   });
 
   // שימרי
@@ -3299,25 +3288,6 @@ function generatePDF() {
       <td>₪8,000</td>
       <td>—</td>
       <td><strong>₪8,000</strong></td>
-    </tr>
-    <tr>
-      <td>דולב</td>
-      <td>${salaryHours['cls_דולב']||salaryHours['sal_דולב']||'—'}</td>
-      <td>₪${(40*(salaryHours['cls_דולב']||salaryHours['sal_דולב']||0)).toLocaleString('he-IL')}</td>
-      <td>₪${(()=>{
-        const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
-        const el = document.getElementById('dolevGrand');
-        const closeBonus = el ? parseInt(el.textContent.replace(/[^\d]/g,''))||0 : 0;
-        return (checkBonus + closeBonus).toLocaleString('he-IL');
-      })()}</td>
-      <td><strong>₪${(()=>{
-        const h = salaryHours['cls_דולב']||salaryHours['sal_דולב']||0;
-        const gross = 40 * h;
-        const checkBonus = results['דולב'] ? Math.round(results['דולב'].total + (targetBonuses['דולב']||0) - (deductions['דולב']||0)) : 0;
-        const el = document.getElementById('dolevGrand');
-        const closeBonus = el ? parseInt(el.textContent.replace(/[^\d]/g,''))||0 : 0;
-        return (gross + checkBonus + closeBonus).toLocaleString('he-IL');
-      })()}</strong></td>
     </tr>
     <tr style="background:#fff9e6">
       <td>צבי אבו גזל <span style="font-size:10px;color:#888">(פיצול שימרי)</span></td>
